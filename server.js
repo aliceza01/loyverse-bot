@@ -153,50 +153,50 @@ async function handleEvent(event) {
     return Promise.resolve(null);
   }
 
-    const userMessage = event.message.text.trim();
+  const userMessage = event.message.text.trim();
 
-// 1. ถ้าลูกค้าพิมพ์คำว่า "ของรางวัล" หรือ "#ของรางวัล" -> ส่งการ์ด Flex Message ให้ดู
-if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
-  return client.replyMessage(event.replyToken, getRewardFlexMessage());
-}
-
-// 2. ถ้าลูกค้ากดปุ่มแลกรางวัล (เช่น "#แลกรางวัล 50ส่วนลด 50")
-if (userMessage.startsWith("#แลกรางวัล")) {
-  // แยกแต้มที่ต้องใช้ และ ชื่อรางวัล
-  const parts = userMessage.replace("#แลกรางวัล ", "").split(/(?<=\d+)/);
-  const requiredPoints = parseFloat(parts[0]);
-  const rewardName = parts[1];
-
-  // ดึงโปรไฟล์ LINE ของลูกค้าหาเบอร์โทร (หรือถ้ามีเก็บเบอร์ไว้ใน Session/DB)
-  // *ตัวอย่างกรณีเช็คแต้มจาก Loyverse ด้วยเบอร์โทรศัพท์ลูกค้า*
-  const customer = await findCustomerByPhone(userPhoneNumber); 
-
-  if (!customer) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "❌ ไม่พบข้อมูลสมาชิก กรุณาแจ้งเบอร์โทรศัพท์เพื่อเช็คแต้มก่อนนะครับ"
-    });
+  // 1. ถ้าลูกค้าพิมพ์คำว่า "ของรางวัล" หรือ "#ของรางวัล" -> ส่งการ์ด Flex Message ให้ดู
+  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
+    return client.replyMessage(event.replyToken, getRewardFlexMessage());
   }
 
-  const currentPoints = customer.total_points || 0;
+  // 2. ถ้าลูกค้ากดปุ่มแลกรางวัล
+  if (userMessage.startsWith("#แลกรางวัล")) {
+    const parts = userMessage.replace("#แลกรางวัล ", "").split(/(?<=\d+)/);
+    const requiredPoints = parseFloat(parts[0]);
+    const rewardName = parts[1];
 
-  // เช็คว่าแต้มพอหรือไม่
-  if (currentPoints >= requiredPoints) {
-    // แต้มพอ -> ส่งรหัสแลกรางวัลให้ลูกค้าเอาไปยื่นหน้าร้าน
-    const redeemCode = "REDEEM-" + Math.floor(1000 + Math.random() * 9000);
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `🎉 ยินดีด้วยครับ! คุณมีแต้มเพียงพอสำหรับแลก "${rewardName}"\n\n🔑 รหัสแลกรางวัลของคุณคือ: ${redeemCode}\n\nกรุณาแสดงหน้าจอนี้ให้พนักงานหน้าร้าน เพื่อตัดแต้มสะสมจำนวน ${requiredPoints} แต้มและรับของรางวัลครับ ✨`
-    });
-  } else {
-    // แต้มไม่พอ
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: `😅 ขออภัยครับ คุณมีแต้มสะสมอยู่ ${currentPoints} แต้ม ซึ่งยังไม่พอสำหรับแลก "${rewardName}" (ต้องใช้ ${requiredPoints} แต้ม)`
-    });
+    // หมายเหตุ: ตรง userPhoneNumber ต้องรับมาจากข้อความ หรือเปลี่ยนเป็นเบอร์ที่ต้องการเช็ค
+    const customer = await findCustomerByPhone(userPhoneNumber);
+
+    if (!customer) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "❌ ไม่พบข้อมูลสมาชิก กรุณาแจ้งเบอร์โทรศัพท์เพื่อเช็คแต้มก่อนนะครับ"
+      });
+    }
+
+    const currentPoints = customer.total_points || 0;
+
+    // เช็คว่าแต้มพอหรือไม่
+    if (currentPoints >= requiredPoints) {
+      const redeemCode = "REDEEM-" + Math.floor(1000 + Math.random() * 9000);
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: `🎉 ยินดีด้วยครับ! คุณมีแต้มเพียงพอสำหรับแลก "${rewardName}"\n\n🔑 รหัสแลกรางวัลของคุณคือ: ${redeemCode}\n\nกรุณาแสดงหน้าจอนี้ให้พนักงานหน้าร้าน เพื่อตัดแต้มสะสมจำนวน ${requiredPoints} แต้มและรับของรางวัลครับ ✨`
+      });
+    } else {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: `😅 ขออภัยครับ คุณมีแต้มสะสมอยู่ ${currentPoints} แต้ม ซึ่งยังไม่พอสำหรับแลก "${rewardName}" (ต้องใช้ ${requiredPoints} แต้ม)`
+      });
+    }
   }
-}
 
+  // ----------------------------------------------------
+  // (ใส่โค้ดเช็คแต้มเดิมของคุณ เช่น #เช็คแต้ม ต่อด้านล่างตรงนี้)
+  // ----------------------------------------------------
+}
 
 
     const customer = await findCustomerByPhone(phoneNumber);
