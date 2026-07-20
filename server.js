@@ -1,21 +1,33 @@
+require('dotenv').config();
 const express = require('express');
 const line = require('@line/bot-sdk');
 const axios = require('axios');
-require('dotenv').config();
+const cron = require('node-cron');
 
 const app = express();
 
+// ==========================================
+// 1. ดึงค่า Environment Variables จาก .env
+// ==========================================
+const LINE_CHANNEL_ACCESS_TOKEN = (process.env.LINE_CHANNEL_ACCESS_TOKEN || '').trim();
+const LINE_CHANNEL_SECRET = (process.env.LINE_CHANNEL_SECRET || '').trim();
+const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
+const TARGET_USER_OR_GROUP_ID = (process.env.TARGET_USER_OR_GROUP_ID || '').trim();
+
 // ตั้งค่า LINE Bot
 const lineConfig = {
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_CHANNEL_SECRET
+  channelAccessToken: LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: LINE_CHANNEL_SECRET
 };
 const client = new line.messagingApi.MessagingApiClient(lineConfig);
 
-// ตั้งค่า Loyverse API
-const LOYVERSE_API_URL = 'https://api.loyverse.com/v1.0/customers';
+// ==========================================
+// 2. Webhook & Endpoint สำหรับ LINE
+// ==========================================
+app.get('/', (req, res) => {
+  res.send('Loyverse Bot & Daily Report Service is running!');
+});
 
-// Webhook endpoint สำหรับ LINE
 app.post('/webhook', line.middleware(lineConfig), (req, res) => {
   Promise
     .all(req.body.events.map(handleEvent))
@@ -26,10 +38,14 @@ app.post('/webhook', line.middleware(lineConfig), (req, res) => {
     });
 });
 
-// ฟังก์ชันค้นหาข้อมูลลูกค้าใน Loyverse ด้วยเบอร์โทรศัพท์ (วนลูปตาม Cursor)
+// ==========================================
+// 3. ฟังก์ชันการทำงานของ LINE Bot
+// ==========================================
+
+// ค้นหาข้อมูลลูกค้าใน Loyverse ด้วยเบอร์โทรศัพท์ (วนลูปตาม Cursor)
 async function findCustomerByPhone(phoneNumber) {
   let cursor = null;
- 
+
   do {
     let url = `https://api.loyverse.com/v1.0/customers?limit=250`;
     if (cursor) {
@@ -39,13 +55,12 @@ async function findCustomerByPhone(phoneNumber) {
     try {
       const response = await axios.get(url, {
         headers: {
-          'Authorization': `Bearer ${process.env.LOYVERSE_TOKEN}`,
+          'Authorization': `Bearer ${LOYVERSE_TOKEN}`,
           'Content-Type': 'application/json'
         }
       });
 
       const customers = response.data.customers || [];
-
       const matchedCustomer = customers.find(c => {
         const phoneInSystem = c.phone_number ? c.phone_number.replace(/\s+/g, '') : '';
         return phoneInSystem === phoneNumber;
@@ -57,7 +72,7 @@ async function findCustomerByPhone(phoneNumber) {
 
       cursor = response.data.cursor;
     } catch (error) {
-      console.error("Error fetching from Loyverse:", error);
+      console.error("Error fetching customers from Loyverse:", error.message);
       break;
     }
 
@@ -66,7 +81,7 @@ async function findCustomerByPhone(phoneNumber) {
   return null;
 }
 
-// ฟังก์ชันสร้าง Flex Message แสดงของรางวัล
+// สร้าง Flex Message แสดงของรางวัล
 function getRewardFlexMessage() {
   return {
     type: "flex",
@@ -87,19 +102,8 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              {
-                type: "text",
-                text: "ส่วนลด 50 บาท",
-                weight: "bold",
-                size: "xl"
-              },
-              {
-                type: "text",
-                text: "ใช้ 50 แต้มสะสม",
-                size: "sm",
-                color: "#888888",
-                margin: "md"
-              }
+              { type: "text", text: "ส่วนลด 50 บาท", weight: "bold", size: "xl" },
+              { type: "text", text: "ใช้ 50 แต้มสะสม", size: "sm", color: "#888888", margin: "md" }
             ]
           },
           footer: {
@@ -108,11 +112,7 @@ function getRewardFlexMessage() {
             contents: [
               {
                 type: "button",
-                action: {
-                  type: "message",
-                  label: "กดแลกรางวัล (50 แต้ม)",
-                  text: "#แลกรางวัล 50 ส่วนลด 50"
-                },
+                action: { type: "message", label: "กดแลกรางวัล (50 แต้ม)", text: "#แลกรางวัล 50 ส่วนลด 50" },
                 style: "primary",
                 color: "#ff7f50"
               }
@@ -132,19 +132,8 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              {
-                type: "text",
-                text: "แก้วน้ำ Casper",
-                weight: "bold",
-                size: "xl"
-              },
-              {
-                type: "text",
-                text: "ใช้ 100 แต้มสะสม",
-                size: "sm",
-                color: "#888888",
-                margin: "md"
-              }
+              { type: "text", text: "แก้วน้ำ Casper", weight: "bold", size: "xl" },
+              { type: "text", text: "ใช้ 100 แต้มสะสม", size: "sm", color: "#888888", margin: "md" }
             ]
           },
           footer: {
@@ -153,11 +142,7 @@ function getRewardFlexMessage() {
             contents: [
               {
                 type: "button",
-                action: {
-                  type: "message",
-                  label: "กดแลกรางวัล (100 แต้ม)",
-                  text: "#แลกรางวัล 100 แก้วน้ำ Casper"
-                },
+                action: { type: "message", label: "กดแลกรางวัล (100 แต้ม)", text: "#แลกรางวัล 100 แก้วน้ำ Casper" },
                 style: "primary",
                 color: "#4682b4"
               }
@@ -169,7 +154,7 @@ function getRewardFlexMessage() {
   };
 }
 
-// ฟังก์ชันหลักสำหรับจัดการข้อความที่ส่งมาจาก LINE
+// จัดการข้อความที่ส่งมาจาก LINE
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
@@ -185,14 +170,11 @@ async function handleEvent(event) {
     });
   }
 
-   // 2. คำสั่งเมื่อลูกค้ากดปุ่มแลกรางวัล
+  // 2. คำสั่งเมื่อลูกค้ากดปุ่มแลกรางวัล
   if (userMessage.startsWith("#แลกรางวัล")) {
-    // ตัดคำว่า #แลกรางวัล ออกแล้วลบช่องว่างหัวท้าย
     const rawContent = userMessage.replace("#แลกรางวัล", "").trim();
-    
-    // แยกแต้มกับชื่อของรางวัลด้วยช่องว่างแรกที่เจอ
     const firstSpaceIndex = rawContent.indexOf(" ");
-    
+   
     let requiredPoints = 0;
     let rewardName = "";
 
@@ -211,8 +193,6 @@ async function handleEvent(event) {
       }]
     });
   }
-
-
 
   // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์
   const match = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
@@ -254,7 +234,7 @@ async function handleEvent(event) {
     }
   }
 
-  // 4. กรณีพิมพ์เฉพาะคำว่า "#เช็คแต้ม" หรือ พิมพ์แค่เบอร์โทร 9-10 หลักโดดๆ
+  // 4. กรณีพิมพ์เฉพาะคำว่า "#เช็คแต้ม" หรือ เบอร์โทร 9-10 หลักโดดๆ
   const isCheckPointsKeyword = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
 
@@ -271,26 +251,9 @@ async function handleEvent(event) {
   return Promise.resolve(null);
 }
 
-// เริ่มต้นเปิด Server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
 // ==========================================
-// โค้ดเดิมของ loyverse-bot (รับ Webhook / ตอบแชท)
+// 4. ระบบส่งรายงานประจำวัน ( Cron Job เวลา 22:00 น. )
 // ==========================================
-// ... (โค้ดเดิมของคุณ) ...
-
-
-// ==========================================
-// แปะเพิ่ม: โค้ดส่งรายงานประจำวัน (22:30 น.)
-// ==========================================
-const cron = require('node-cron');
-const axios = require('axios');
-
-// ดึง Target ID สำหรับส่งรายงาน
-const targetId = (process.env.TARGET_USER_OR_GROUP_ID || '').trim();
-
 async function getDailySales() {
   try {
     const now = new Date();
@@ -298,7 +261,7 @@ async function getDailySales() {
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
     const response = await axios.get('https://api.loyverse.com/v1.0/receipts', {
-      headers: { 'Authorization': `Bearer ${(process.env.LOYVERSE_TOKEN || '').trim()}` },
+      headers: { 'Authorization': `Bearer ${LOYVERSE_TOKEN}` },
       params: { created_at_min: startOfDay, created_at_max: endOfDay, limit: 250 }
     });
 
@@ -320,32 +283,43 @@ async function getDailySales() {
       totalReceipts: receipts.length
     };
   } catch (error) {
-    console.error('Error fetching Loyverse:', error.message);
+    console.error('Error fetching Loyverse receipts:', error.message);
     return null;
   }
 }
 
-// ตั้งเวลาส่ง 22:30 น. ทุกวัน
-cron.schedule('00 22 * * *', async () => {
-  console.log('⏰ เริ่มส่งรายงานประจำวัน...');
+// ตั้งเวลาส่ง 22:00 น. ของทุกวัน (เวลาไทย)
+cron.schedule('0 22 * * *', async () => {
+  console.log('⏰ ถึงเวลา 22:00 น. เริ่มส่งรายงานประจำวัน...');
+  
+  if (!TARGET_USER_OR_GROUP_ID) {
+    console.log('❌ ไม่พบ TARGET_USER_OR_GROUP_ID ใน .env');
+    return;
+  }
+
   const salesData = await getDailySales();
-  if (!salesData || !targetId) return;
+  if (!salesData) return;
 
   const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-  const messageText = `📈 สรุปยอดขาย & กำไรประจำวัน 📈\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล`;
+  const messageText = `📈 สรุปยอดขาย & กำไรประจำวัน 📈\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล\n\nขอบคุณสำหรับความตั้งใจทำงานในวันนี้ครับ! ✨`;
 
   try {
-    // ใช้ client ของ LINE จากโค้ดเดิมส่ง pushMessage
     await client.pushMessage({
-      to: targetId,
+      to: TARGET_USER_OR_GROUP_ID,
       messages: [{ type: 'text', text: messageText }]
     });
-    console.log('✅ ส่งรายงานเรียบร้อย!');
+    console.log('✅ ส่งรายงานยอดขายประจำวันเรียบร้อย!');
   } catch (err) {
     console.error('❌ ส่งรายงานไม่สำเร็จ:', err.message);
   }
 }, { timezone: "Asia/Bangkok" });
 
-
+// ==========================================
+// 5. เริ่มต้นเปิด Server
+// ==========================================
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+});
 
 
