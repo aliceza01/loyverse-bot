@@ -26,6 +26,42 @@ app.post('/webhook', line.middleware(lineConfig), (req, res) => {
     });
 });
 
+async function findCustomerByPhone(phoneNumber) {
+  let cursor = null;
+  
+  do {
+    // 1. สร้าง URL พร้อมพารามิเตอร์ limit=250 และ cursor (ถ้ามี)
+    let url = `https://api.loyverse.com/v1.0/customers?limit=250`;
+    if (cursor) {
+      url += `&cursor=${cursor}`;
+    }
+
+    // 2. ส่ง Request ไปยัง Loyverse API
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.LOYVERSE_TOKEN}`, // หรือชื่อตัวแปร Token ของคุณ
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+    const customers = data.customers || [];
+
+    // 3. ค้นหาเบอร์โทรศัพท์ในชุดข้อมูล 250 คนนี้
+    const matchedCustomer = customers.find(c => c.phone_number === phoneNumber);
+    if (matchedCustomer) {
+      return matchedCustomer; // เจอแล้ว! คืนค่าข้อมูลลูกค้าคนนี้ทันที
+    }
+
+    // 4. อัปเดต cursor สำหรับดึงข้อมูลชุดถัดไป (ถ้าไม่มีแล้วจะหยุดลูป)
+    cursor = data.cursor;
+
+  } while (cursor);
+
+  return null; // หาไม่เจอจนถึงคนสุดท้าย
+}
+
 // ฟังก์ชันจัดการข้อความที่ส่งมาจาก LINE
 async function handleEvent(event) {
   // ตรวจสอบว่าต้องเป็นข้อความตัวหนังสือเท่านั้น
@@ -34,7 +70,16 @@ async function handleEvent(event) {
   }
 
     const userMessage = event.message.text.trim();
-  
+    const customer = await findCustomerByPhone(phoneNumber);
+
+if (customer) {
+    // เจอลูกค้า -> เอาแต้มส่งกลับให้ LINE
+    const points = customer.total_points || 0;
+    // ... ส่งข้อความบอกแต้มลูกค้า
+} else {
+    // ไม่พบลูกค้าในระบบ
+}
+ 
   // 1. ตรวจสอบว่าเป็นข้อความตัวอักษรพิมพ์เข้ามาไหม
   if (event.type === 'message' && event.message.type === 'text') {
     const userMessage = event.message.text.trim();
