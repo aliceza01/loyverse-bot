@@ -61,6 +61,90 @@ async function findCustomerByPhone(phoneNumber) {
 
   return null; // หาไม่เจอจนถึงคนสุดท้าย
 }
+// ฟังก์ชันสร้าง Flex Message แสดงของรางวัล
+function getRewardFlexMessage() {
+  return {
+    type: "flex",
+    altText: "รายการของรางวัลสะสมแต้ม 🎁",
+    contents: {
+      type: "carousel",
+      contents: [
+        // Card 1: คูปองส่วนลด 50 บาท
+        {
+          type: "bubble",
+          hero: {
+            type: "image",
+            url: "https://via.placeholder.com/600x400/ff7f50/ffffff?text=Discount+50฿", // เปลี่ยนเป็น URL รูปจริง
+            size: "full",
+            aspectRatio: "20:13",
+            aspectMode: "cover"
+          },
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              { type: "text", text: "คูปองส่วนลด 50 บาท", weight: "bold", size: "xl" },
+              { type: "text", text: "ใช้ 50 แต้มสะสม", size: "sm", color: "#888888", margin: "md" }
+            ]
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "button",
+                action: {
+                  type: "message",
+                  label: "กดแลกรางวัล (50 แต้ม)",
+                  text: "#แลกรางวัล 50ส่วนลด 50"
+                },
+                style: "primary",
+                color: "#ff7f50"
+              }
+            ]
+          }
+        },
+        // Card 2: สินค้าพิเศษ / แก้วน้ำ
+        {
+          type: "bubble",
+          hero: {
+            type: "image",
+            url: "https://via.placeholder.com/600x400/4682b4/ffffff?text=Casper+Mug", // เปลี่ยนเป็น URL รูปจริง
+            size: "full",
+            aspectRatio: "20:13",
+            aspectMode: "cover"
+          },
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              { type: "text", text: "แก้วน้ำ Casper Petshop", weight: "bold", size: "xl" },
+              { type: "text", text: "ใช้ 100 แต้มสะสม", size: "sm", color: "#888888", margin: "md" }
+            ]
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "button",
+                action: {
+                  type: "message",
+                  label: "กดแลกรางวัล (100 แต้ม)",
+                  text: "#แลกรางวัล 100แก้วน้ำ Casper"
+                },
+                style: "primary",
+                color: "#4682b4"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  };
+}
+
+
 
 // ฟังก์ชันจัดการข้อความที่ส่งมาจาก LINE
 async function handleEvent(event) {
@@ -70,6 +154,52 @@ async function handleEvent(event) {
   }
 
     const userMessage = event.message.text.trim();
+    const userMessage = event.message.text.trim();
+
+// 1. ถ้าลูกค้าพิมพ์คำว่า "ของรางวัล" หรือ "#ของรางวัล" -> ส่งการ์ด Flex Message ให้ดู
+if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
+  return client.replyMessage(event.replyToken, getRewardFlexMessage());
+}
+
+// 2. ถ้าลูกค้ากดปุ่มแลกรางวัล (เช่น "#แลกรางวัล 50ส่วนลด 50")
+if (userMessage.startsWith("#แลกรางวัล")) {
+  // แยกแต้มที่ต้องใช้ และ ชื่อรางวัล
+  const parts = userMessage.replace("#แลกรางวัล ", "").split(/(?<=\d+)/);
+  const requiredPoints = parseFloat(parts[0]);
+  const rewardName = parts[1];
+
+  // ดึงโปรไฟล์ LINE ของลูกค้าหาเบอร์โทร (หรือถ้ามีเก็บเบอร์ไว้ใน Session/DB)
+  // *ตัวอย่างกรณีเช็คแต้มจาก Loyverse ด้วยเบอร์โทรศัพท์ลูกค้า*
+  const customer = await findCustomerByPhone(userPhoneNumber); 
+
+  if (!customer) {
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "❌ ไม่พบข้อมูลสมาชิก กรุณาแจ้งเบอร์โทรศัพท์เพื่อเช็คแต้มก่อนนะครับ"
+    });
+  }
+
+  const currentPoints = customer.total_points || 0;
+
+  // เช็คว่าแต้มพอหรือไม่
+  if (currentPoints >= requiredPoints) {
+    // แต้มพอ -> ส่งรหัสแลกรางวัลให้ลูกค้าเอาไปยื่นหน้าร้าน
+    const redeemCode = "REDEEM-" + Math.floor(1000 + Math.random() * 9000);
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `🎉 ยินดีด้วยครับ! คุณมีแต้มเพียงพอสำหรับแลก "${rewardName}"\n\n🔑 รหัสแลกรางวัลของคุณคือ: ${redeemCode}\n\nกรุณาแสดงหน้าจอนี้ให้พนักงานหน้าร้าน เพื่อตัดแต้มสะสมจำนวน ${requiredPoints} แต้มและรับของรางวัลครับ ✨`
+    });
+  } else {
+    // แต้มไม่พอ
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: `😅 ขออภัยครับ คุณมีแต้มสะสมอยู่ ${currentPoints} แต้ม ซึ่งยังไม่พอสำหรับแลก "${rewardName}" (ต้องใช้ ${requiredPoints} แต้ม)`
+    });
+  }
+}
+
+
+
     const customer = await findCustomerByPhone(phoneNumber);
 
 if (customer) {
