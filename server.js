@@ -181,12 +181,6 @@ async function handleEvent(event) {
     return client.replyMessage(event.replyToken, getRewardFlexMessage());
   }
 
-
-
-
-
-
-
   // 2. ถ้าลูกค้ากดปุ่มแลกรางวัล
   if (userMessage.startsWith("#แลกรางวัล")) {
     const parts = userMessage.replace("#แลกรางวัล ", "").split(/(?<=\d+)/);
