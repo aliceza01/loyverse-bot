@@ -276,5 +276,76 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+// ==========================================
+// โค้ดเดิมของ loyverse-bot (รับ Webhook / ตอบแชท)
+// ==========================================
+// ... (โค้ดเดิมของคุณ) ...
+
+
+// ==========================================
+// แปะเพิ่ม: โค้ดส่งรายงานประจำวัน (22:30 น.)
+// ==========================================
+const cron = require('node-cron');
+const axios = require('axios');
+
+// ดึง Target ID สำหรับส่งรายงาน
+const targetId = (process.env.TARGET_USER_OR_GROUP_ID || '').trim();
+
+async function getDailySales() {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+
+    const response = await axios.get('https://api.loyverse.com/v1.0/receipts', {
+      headers: { 'Authorization': `Bearer ${(process.env.LOYVERSE_TOKEN || '').trim()}` },
+      params: { created_at_min: startOfDay, created_at_max: endOfDay, limit: 250 }
+    });
+
+    const receipts = response.data.receipts || [];
+    let totalSales = 0, totalCost = 0;
+
+    receipts.forEach(receipt => {
+      totalSales += receipt.total_money || 0;
+      if (receipt.line_items) {
+        receipt.line_items.forEach(item => {
+          totalCost += ((item.cost || 0) * (item.quantity || 1));
+        });
+      }
+    });
+
+    return {
+      totalSales: totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      netProfit: (totalSales - totalCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      totalReceipts: receipts.length
+    };
+  } catch (error) {
+    console.error('Error fetching Loyverse:', error.message);
+    return null;
+  }
+}
+
+// ตั้งเวลาส่ง 22:30 น. ทุกวัน
+cron.schedule('30 22 * * *', async () => {
+  console.log('⏰ เริ่มส่งรายงานประจำวัน...');
+  const salesData = await getDailySales();
+  if (!salesData || !targetId) return;
+
+  const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  const messageText = `📈 สรุปยอดขาย & กำไรประจำวัน 📈\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล`;
+
+  try {
+    // ใช้ client ของ LINE จากโค้ดเดิมส่ง pushMessage
+    await client.pushMessage({
+      to: targetId,
+      messages: [{ type: 'text', text: messageText }]
+    });
+    console.log('✅ ส่งรายงานเรียบร้อย!');
+  } catch (err) {
+    console.error('❌ ส่งรายงานไม่สำเร็จ:', err.message);
+  }
+}, { timezone: "Asia/Bangkok" });
+
+
 
 
