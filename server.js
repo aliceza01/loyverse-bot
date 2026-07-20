@@ -74,7 +74,7 @@ function getRewardFlexMessage() {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://via.placeholder.com/600x400/ff7f50/ffffff?text=Discount+50฿", // เปลี่ยนเป็น URL รูปจริง
+            url: "https://i.postimg.cc/k5ZSZHmp/test01.png", // เปลี่ยนเป็น URL รูปจริง
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
@@ -109,7 +109,7 @@ function getRewardFlexMessage() {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://via.placeholder.com/600x400/4682b4/ffffff?text=Casper+Mug", // เปลี่ยนเป็น URL รูปจริง
+            url: "https://i.postimg.cc/k5ZSZHmp/test01.png", // เปลี่ยนเป็น URL รูปจริง
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
