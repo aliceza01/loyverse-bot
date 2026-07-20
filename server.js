@@ -39,7 +39,44 @@ app.post('/webhook', line.middleware(lineConfig), (req, res) => {
 });
 
 // ==========================================
-// 3. ฟังก์ชันการทำงานของ LINE Bot
+// 3. ฟังก์ชันดึงข้อมูลยอดขายและกำไร
+// ==========================================
+async function getDailySales() {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+
+    const response = await axios.get('https://api.loyverse.com/v1.0/receipts', {
+      headers: { 'Authorization': `Bearer ${LOYVERSE_TOKEN}` },
+      params: { created_at_min: startOfDay, created_at_max: endOfDay, limit: 250 }
+    });
+
+    const receipts = response.data.receipts || [];
+    let totalSales = 0, totalCost = 0;
+
+    receipts.forEach(receipt => {
+      totalSales += receipt.total_money || 0;
+      if (receipt.line_items) {
+        receipt.line_items.forEach(item => {
+          totalCost += ((item.cost || 0) * (item.quantity || 1));
+        });
+      }
+    });
+
+    return {
+      totalSales: totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      netProfit: (totalSales - totalCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      totalReceipts: receipts.length
+    };
+  } catch (error) {
+    console.error('Error fetching Loyverse receipts:', error.message);
+    return null;
+  }
+}
+
+// ==========================================
+// 4. ฟังก์ชันการทำงานของ LINE Bot (จัดการข้อความ)
 // ==========================================
 
 // ค้นหาข้อมูลลูกค้าใน Loyverse ด้วยเบอร์โทรศัพท์ (วนลูปตาม Cursor)
@@ -161,8 +198,30 @@ async function handleEvent(event) {
   }
 
   const userMessage = event.message.text.trim();
+  const senderId = event.source.userId; // ดึง User ID ของคนที่พิมพ์เข้ามา
 
-  // 1. คำสั่งแสดงของรางวัล
+  // 0. คำสั่งเรียกดูยอดขายและกำไร (ล็อกเฉพาะ User ID ของคุณเท่านั้น!)
+  if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
+    // ถ้าไม่ใช่ ID ของคุณ จะไม่ตอบอะไรเลย (หรือจะให้ส่งข้อความปฏิเสธก็ได้ครับ)
+    if (senderId !== TARGET_USER_OR_GROUP_ID) {
+      console.log(`⚠️ มีคนอื่นพยายามดูยอดขาย (UserId: ${senderId}) ระบบไม่อนุญาต`);
+      return Promise.resolve(null); 
+    }
+
+    const salesData = await getDailySales();
+    const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    const replyText = salesData 
+      ? `📈 สรุปยอดขาย & กำไร (ณ ปัจจุบัน)\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล`
+      : '❌ ไม่สามารถดึงข้อมูลยอดขายจากระบบได้ในขณะนี้';
+
+    return client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: replyText }]
+    });
+  }
+
+  // 1. คำสั่งแสดงของรางวัล (ให้ลูกค้าคนอื่นใช้งานได้ปกติ)
   if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -252,43 +311,8 @@ async function handleEvent(event) {
 }
 
 // ==========================================
-// 4. ระบบส่งรายงานประจำวัน ( Cron Job เวลา 22:00 น. )
+// 5. ระบบส่งรายงานประจำวันอัตโนมัติ ( Cron Job เวลา 22:00 น. )
 // ==========================================
-async function getDailySales() {
-  try {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
-
-    const response = await axios.get('https://api.loyverse.com/v1.0/receipts', {
-      headers: { 'Authorization': `Bearer ${LOYVERSE_TOKEN}` },
-      params: { created_at_min: startOfDay, created_at_max: endOfDay, limit: 250 }
-    });
-
-    const receipts = response.data.receipts || [];
-    let totalSales = 0, totalCost = 0;
-
-    receipts.forEach(receipt => {
-      totalSales += receipt.total_money || 0;
-      if (receipt.line_items) {
-        receipt.line_items.forEach(item => {
-          totalCost += ((item.cost || 0) * (item.quantity || 1));
-        });
-      }
-    });
-
-    return {
-      totalSales: totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      netProfit: (totalSales - totalCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      totalReceipts: receipts.length
-    };
-  } catch (error) {
-    console.error('Error fetching Loyverse receipts:', error.message);
-    return null;
-  }
-}
-
-// ตั้งเวลาส่ง 22:00 น. ของทุกวัน (เวลาไทย)
 cron.schedule('0 22 * * *', async () => {
   console.log('⏰ ถึงเวลา 22:00 น. เริ่มส่งรายงานประจำวัน...');
   
@@ -315,11 +339,10 @@ cron.schedule('0 22 * * *', async () => {
 }, { timezone: "Asia/Bangkok" });
 
 // ==========================================
-// 5. เริ่มต้นเปิด Server
+// 6. เริ่มต้นเปิด Server
 // ==========================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });
-
 
