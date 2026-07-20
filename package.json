@@ -14,7 +14,8 @@
     "@line/bot-sdk": "^11.2.0",
     "axios": "^1.18.1",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "node-cron": "^4.6.0"
   }
   
 }
