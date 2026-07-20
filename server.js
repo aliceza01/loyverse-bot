@@ -155,10 +155,16 @@ async function handleEvent(event) {
 
   const userMessage = event.message.text.trim();
 
-  // 1. ถ้าลูกค้าพิมพ์คำว่า "ของรางวัล" หรือ "#ของรางวัล" -> ส่งการ์ด Flex Message ให้ดู
-  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
-    return client.replyMessage(event.replyToken, getRewardFlexMessage());
-  }
+// ลองแก้ชั่วคราวเป็นส่งข้อความธรรมดาดูครับ
+if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
+  return client.replyMessage(event.replyToken, {
+    type: "text",
+    text: "🎁 ทดสอบระบบของรางวัล: ตอนนี้ระบบได้รับคำขอแล้วครับ!"
+  });
+}
+
+
+
 
   // 2. ถ้าลูกค้ากดปุ่มแลกรางวัล
   if (userMessage.startsWith("#แลกรางวัล")) {
