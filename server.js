@@ -111,7 +111,7 @@ function getRewardFlexMessage() {
                 action: {
                   type: "message",
                   label: "กดแลกรางวัล (50 แต้ม)",
-                  text: "#แลกรางวัล 50ส่วนลด 50"
+                  text: "#แลกรางวัล 50 ส่วนลด 50"
                 },
                 style: "primary",
                 color: "#ff7f50"
@@ -156,7 +156,7 @@ function getRewardFlexMessage() {
                 action: {
                   type: "message",
                   label: "กดแลกรางวัล (100 แต้ม)",
-                  text: "#แลกรางวัล 100แก้วน้ำ Casper"
+                  text: "#แลกรางวัล 100 แก้วน้ำ Casper"
                 },
                 style: "primary",
                 color: "#4682b4"
@@ -185,11 +185,23 @@ async function handleEvent(event) {
     });
   }
 
-  // 2. คำสั่งเมื่อลูกค้ากดปุ่มแลกรางวัล
+   // 2. คำสั่งเมื่อลูกค้ากดปุ่มแลกรางวัล
   if (userMessage.startsWith("#แลกรางวัล")) {
-    const parts = userMessage.replace("#แลกรางวัล ", "").split(/(?<=\d+)/);
-    const requiredPoints = parseFloat(parts[0]);
-    const rewardName = parts[1];
+    // ตัดคำว่า #แลกรางวัล ออกแล้วลบช่องว่างหัวท้าย
+    const rawContent = userMessage.replace("#แลกรางวัล", "").trim();
+    
+    // แยกแต้มกับชื่อของรางวัลด้วยช่องว่างแรกที่เจอ
+    const firstSpaceIndex = rawContent.indexOf(" ");
+    
+    let requiredPoints = 0;
+    let rewardName = "";
+
+    if (firstSpaceIndex !== -1) {
+      requiredPoints = parseFloat(rawContent.substring(0, firstSpaceIndex)) || 0;
+      rewardName = rawContent.substring(firstSpaceIndex + 1).trim();
+    } else {
+      rewardName = rawContent;
+    }
 
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -199,6 +211,8 @@ async function handleEvent(event) {
       }]
     });
   }
+
+
 
   // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์
   const match = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
@@ -215,7 +229,7 @@ async function handleEvent(event) {
           replyToken: event.replyToken,
           messages: [{
             type: 'text',
-            text: `สวัสดีครับ คุณ${matchedCustomer.name || 'ลูกค้า'}\nตอนนี้มีแต้มสะสมทั้งหมด: ${points} แต้มครับ ✨`
+            text: `สวัสดีครับ ${matchedCustomer.name || 'ลูกค้า'}\nตอนนี้มีแต้มสะสมทั้งหมด: ${points} แต้มครับ ✨`
           }]
         });
       } else {
