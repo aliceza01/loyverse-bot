@@ -154,7 +154,6 @@ async function handleEvent(event) {
   }
 
     const userMessage = event.message.text.trim();
-    const userMessage = event.message.text.trim();
 
 // 1. ถ้าลูกค้าพิมพ์คำว่า "ของรางวัล" หรือ "#ของรางวัล" -> ส่งการ์ด Flex Message ให้ดู
 if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
