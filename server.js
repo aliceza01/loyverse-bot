@@ -69,12 +69,11 @@ function getRewardFlexMessage() {
     contents: {
       type: "carousel",
       contents: [
-        // Card 1: คูปองส่วนลด 50 บาท
         {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://i.postimg.cc/k5ZSZHmp/test01.png", // เปลี่ยนเป็น URL รูปจริง
+            url: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600&auto=format&fit=crop&q=60",
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
@@ -83,8 +82,19 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "คูปองส่วนลด 50 บาท", weight: "bold", size: "xl" },
-              { type: "text", text: "ใช้ 50 แต้มสะสม", size: "sm", color: "#888888", margin: "md" }
+              {
+                type: "text",
+                text: "ส่วนลด 50 บาท",
+                weight: "bold",
+                size: "xl"
+              },
+              {
+                type: "text",
+                text: "ใช้ 50 แต้มสะสม",
+                size: "sm",
+                color: "#888888",
+                margin: "md"
+              }
             ]
           },
           footer: {
@@ -104,12 +114,11 @@ function getRewardFlexMessage() {
             ]
           }
         },
-        // Card 2: สินค้าพิเศษ / แก้วน้ำ
         {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://i.postimg.cc/k5ZSZHmp/test01.png", // เปลี่ยนเป็น URL รูปจริง
+            url: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&auto=format&fit=crop&q=60",
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
@@ -118,8 +127,19 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "แก้วน้ำ Casper Petshop", weight: "bold", size: "xl" },
-              { type: "text", text: "ใช้ 100 แต้มสะสม", size: "sm", color: "#888888", margin: "md" }
+              {
+                type: "text",
+                text: "แก้วน้ำ Casper",
+                weight: "bold",
+                size: "xl"
+              },
+              {
+                type: "text",
+                text: "ใช้ 100 แต้มสะสม",
+                size: "sm",
+                color: "#888888",
+                margin: "md"
+              }
             ]
           },
           footer: {
@@ -146,6 +166,8 @@ function getRewardFlexMessage() {
 
 
 
+
+
 // ฟังก์ชันจัดการข้อความที่ส่งมาจาก LINE
 async function handleEvent(event) {
   // ตรวจสอบว่าต้องเป็นข้อความตัวหนังสือเท่านั้น
@@ -155,13 +177,12 @@ async function handleEvent(event) {
 
   const userMessage = event.message.text.trim();
 
-// ลองแก้ชั่วคราวเป็นส่งข้อความธรรมดาดูครับ
-if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: "🎁 ทดสอบระบบของรางวัล: ตอนนี้ระบบได้รับคำขอแล้วครับ!"
-  });
-}
+  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
+    return client.replyMessage(event.replyToken, getRewardFlexMessage());
+  }
+
+
+
 
 
 
