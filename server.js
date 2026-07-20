@@ -326,7 +326,7 @@ async function getDailySales() {
 }
 
 // ตั้งเวลาส่ง 22:30 น. ทุกวัน
-cron.schedule('30 22 * * *', async () => {
+cron.schedule('00 22 * * *', async () => {
   console.log('⏰ เริ่มส่งรายงานประจำวัน...');
   const salesData = await getDailySales();
   if (!salesData || !targetId) return;
