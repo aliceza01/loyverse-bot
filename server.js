@@ -140,7 +140,7 @@ async function getDailySales() {
 }
 
 // ==========================================
-// 4. ฟังก์ชันการทำงานของ LINE Bot (จัดการข้อความ)
+// 4. ฟังก์ชันการทำงานของ LINE Bot (จัดการข้อความ & ออกแบบ Flex Message)
 // ==========================================
 
 // ค้นหาข้อมูลลูกค้าใน Loyverse ด้วยเบอร์โทรศัพท์ (วนลูปตาม Cursor)
@@ -182,7 +182,98 @@ async function findCustomerByPhone(phoneNumber) {
   return null;
 }
 
-// สร้าง Flex Message สวยๆ สำหรับแสดงของรางวัล
+// --- รวมฟังก์ชัน Flex Message ดีไซน์สวยงาม ---
+
+function getUserIdFlexMessage(userId) {
+  return {
+    type: "flex",
+    altText: "🆔 User ID ของคุณ",
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: "🆔 LINE User ID", weight: "bold", size: "md", color: "#555555" },
+          { type: "text", text: userId, size: "xs", color: "#888888", wrap: true, margin: "md" }
+        ]
+      }
+    }
+  };
+}
+
+function getAdminNoticeFlexMessage(title, description) {
+  return {
+    type: "flex",
+    altText: title,
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: title, weight: "bold", size: "md", color: "#1DB446", wrap: true },
+          { type: "text", text: description, size: "sm", color: "#666666", wrap: true, margin: "md" }
+        ]
+      }
+    }
+  };
+}
+
+function getSalesFlexMessage(salesData, todayStr) {
+  return {
+    type: "flex",
+    altText: "📈 สรุปยอดขาย & กำไรประจำวัน",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: "📈 สรุปยอดขาย & กำไร", weight: "bold", size: "lg", color: "#ffffff", align: "center" },
+          { type: "text", text: `📅 ${todayStr}`, size: "xs", color: "#ffffff", align: "center", margin: "sm" }
+        ],
+        backgroundColor: "#0066cc",
+        paddingAll: "lg"
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "💵 ยอดขายรวม", size: "sm", color: "#555555" },
+              { type: "text", text: `${salesData.totalSales} ฿`, size: "sm", weight: "bold", color: "#0066cc", align: "end" }
+            ],
+            margin: "md"
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "💰 กำไรสุทธิ", size: "sm", color: "#555555" },
+              { type: "text", text: `${salesData.netProfit} ฿`, size: "sm", weight: "bold", color: "#1DB446", align: "end" }
+            ],
+            margin: "md"
+          },
+          { type: "separator", margin: "lg" },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🧾 บิลทั้งหมด", size: "xs", color: "#aaaaaa" },
+              { type: "text", text: `${salesData.totalReceipts} บิล`, size: "xs", color: "#aaaaaa", align: "end" }
+            ],
+            margin: "md"
+          }
+        ]
+      }
+    }
+  };
+}
+
 function getRewardFlexMessage() {
   return {
     type: "flex",
@@ -255,7 +346,6 @@ function getRewardFlexMessage() {
   };
 }
 
-// สร้าง Flex Message สวยๆ สำหรับแสดงแต้มสะสมของลูกค้า
 function getPointFlexMessage(customerName, points, phone) {
   return {
     type: "flex",
@@ -306,6 +396,37 @@ function getPointFlexMessage(customerName, points, phone) {
   };
 }
 
+function getWelcomeHelpFlexMessage() {
+  return {
+    type: "flex",
+    altText: "✨ ยินดีต้อนรับสู่ระบบสะสมแต้ม",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: "🐾 CASPER PETSHOP 🐾", weight: "bold", size: "sm", color: "#ffffff", align: "center" },
+          { type: "text", text: "ระบบสมาชิก & สะสมแต้ม", weight: "bold", size: "md", color: "#ffffff", align: "center", margin: "sm" }
+        ],
+        backgroundColor: "#1DB446",
+        paddingAll: "md"
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: "📌 วิธีใช้งานครั้งแรก:", weight: "bold", size: "sm", color: "#333333" },
+          { type: "text", text: 'พิมพ์ "เช็คแต้ม" ตามด้วยเบอร์โทร เช่น เช็คแต้ม0812345678 เพื่อบันทึกข้อมูล', size: "xs", color: "#666666", wrap: true, margin: "sm" },
+          { type: "separator", margin: "lg" },
+          { type: "text", text: "🔄 ใช้งานครั้งถัดไป:", weight: "bold", size: "sm", color: "#333333", margin: "lg" },
+          { type: "text", text: 'พิมพ์คำว่า "แต้ม" เฉยๆ เพื่อเช็คยอดคะแนนได้ทันทีไม่ต้องพิมพ์เบอร์ซ้ำ', size: "xs", color: "#666666", wrap: true, margin: "sm" }
+        ]
+      }
+    }
+  };
+}
+
 // จัดการข้อความที่ส่งมาจาก LINE
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') {
@@ -315,15 +436,15 @@ async function handleEvent(event) {
   const userMessage = event.message.text.trim();
   const senderId = event.source.userId;
 
-  // 0.0 คำสั่งเช็ค User ID ของตัวเอง (เพื่อให้คุณเอาไปใส่เป็นแอดมินใน Render)
+  // 0.0 คำสั่งเช็ค User ID ของตัวเอง
   if (userMessage === "ไอดีฉัน" || userMessage === "id") {
     return client.replyMessage({
       replyToken: event.replyToken,
-      messages: [{ type: 'text', text: `🆔 User ID ของคุณคือ:\n${senderId}` }]
+      messages: [getUserIdFlexMessage(senderId)]
     });
   }
 
-  // 0.1 คำสั่งสำหรับแอดมิน: บังคับอัปเดต Rich Menu ใหม่ให้ลูกค้าทุกคนทันที (ผ่านแชท)
+  // 0.1 คำสั่งสำหรับแอดมิน: บังคับอัปเดต Rich Menu ใหม่ให้ลูกค้าทุกคนทันที
   if (userMessage.startsWith("#เปลี่ยนริชเมนู")) {
     if (!ADMIN_IDS.includes(senderId)) {
       return Promise.resolve(null);
@@ -333,43 +454,45 @@ async function handleEvent(event) {
     if (!newRichMenuId) {
       return client.replyMessage({
         replyToken: event.replyToken,
-        messages: [{ type: 'text', text: '❌ กรุณาใส่ Rich Menu ID ต่อท้ายด้วย เช่น #เปลี่ยนริชเมนู 9408661' }]
+        messages: [getAdminNoticeFlexMessage("❌ รูปแบบไม่ถูกต้อง", "กรุณาใส่ Rich Menu ID ต่อท้ายด้วย เช่น #เปลี่ยนริชเมนู 9408661")]
       });
     }
 
     const success = await setDefaultRichMenuGlobal(newRichMenuId);
     return client.replyMessage({
       replyToken: event.replyToken,
-      messages: [{ 
-        type: 'text', 
-        text: success 
-          ? `✅ สั่งอัปเดต Rich Menu (${newRichMenuId}) ให้ลูกค้าทุกคนเรียบร้อยแล้วครับ!` 
-          : '❌ อัปเดตไม่สำเร็จ ตรวจสอบ ID หรือ Log ของ Server อีกครั้ง' 
-      }]
+      messages: [
+        getAdminNoticeFlexMessage(
+          success ? "✅ สำเร็จ" : "❌ ล้มเหลว",
+          success ? `สั่งอัปเดต Rich Menu (${newRichMenuId}) ให้ลูกค้าทุกคนเรียบร้อยแล้วครับ!` : "อัปเดตไม่สำเร็จ ตรวจสอบ ID หรือ Log ของ Server อีกครั้ง"
+        )
+      ]
     });
   }
 
   // 0.2 คำสั่งเรียกดูยอดขายและกำไร (ล็อกเฉพาะกลุ่มแอดมินเท่านั้น!)
   if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
     if (!ADMIN_IDS.includes(senderId)) {
-      console.log(`⚠️ มีคนอื่นพยายามดูยอดขาย (UserId: ${senderId}) ระบบไม่อนุญาต`);
       return Promise.resolve(null);
     }
 
     const salesData = await getDailySales();
     const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
     
-    const replyText = salesData
-      ? `📈 สรุปยอดขาย & กำไร (ณ ปัจจุบัน)\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล`
-      : '❌ ไม่สามารถดึงข้อมูลยอดขายจากระบบได้ในขณะนี้';
+    if (!salesData) {
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [getAdminNoticeFlexMessage("❌ ดึงข้อมูลไม่สำเร็จ", "ไม่สามารถดึงข้อมูลยอดขายจากระบบได้ในขณะนี้")]
+      });
+    }
 
     return client.replyMessage({
       replyToken: event.replyToken,
-      messages: [{ type: 'text', text: replyText }]
+      messages: [getSalesFlexMessage(salesData, todayStr)]
     });
   }
 
-  // 1. คำสั่งแสดงของรางวัล (ส่ง Flex Message)
+  // 1. คำสั่งแสดงของรางวัล
   if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น") {
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -395,13 +518,26 @@ async function handleEvent(event) {
     return client.replyMessage({
       replyToken: event.replyToken,
       messages: [{
-        type: "text",
-        text: `🎁 คุณเลือกแลก "${rewardName}" (ใช้ ${requiredPoints} แต้ม)\n\nกรุณาแจ้งเบอร์โทรศัพท์กับพนักงานหน้าร้านเพื่อตรวจสอบแต้มสะสมและรับของรางวัลได้เลยครับ! ✨`
+        type: "flex",
+        altText: `🎁 แลกรางวัล: ${rewardName}`,
+        contents: {
+          type: "bubble",
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              { type: "text", text: "🎁 ทำรายการแลกรางวัล", weight: "bold", size: "md", color: "#1DB446" },
+              { type: "text", text: `คุณเลือกแลก "${rewardName}" (ใช้ ${requiredPoints} แต้ม)`, size: "sm", color: "#333333", wrap: true, margin: "md" },
+              { type: "separator", margin: "lg" },
+              { type: "text", text: "กรุณาแจ้งเบอร์โทรศัพท์กับพนักงานหน้าร้านเพื่อตรวจสอบแต้มและรับของรางวัลได้เลยครับ! ✨", size: "xs", color: "#888888", wrap: true, margin: "lg" }
+            ]
+          }
+        }
       }]
     });
   }
 
-  // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์ (บันทึกลง MongoDB ถาวร)
+  // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์
   const matchWithPhone = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
 
   if (matchWithPhone) {
@@ -417,32 +553,26 @@ async function handleEvent(event) {
         return client.replyMessage({
           replyToken: event.replyToken,
           messages: [
-            { type: 'text', text: '📌 บันทึกเบอร์โทรศัพท์เรียบร้อยครับ! 🎉' },
+            getAdminNoticeFlexMessage("📌 บันทึกเบอร์โทรศัพท์เรียบร้อย", `ระบบบันทึกเบอร์ ${phoneNumber} สำเร็จแล้วครับ`),
             getPointFlexMessage(customerName, points, phoneNumber)
           ]
         });
       } else {
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [{
-            type: 'text',
-            text: `ขออภัยไม่พบข้อมูลสมาชิกของเบอร์ ${phoneNumber} ในระบบสะสมแต้ม\n\nหากเพิ่งสมัครใหม่ รบกวนแจ้งพนักงานหน้าร้านเพื่อตรวจสอบการคีย์เบอร์โทรศัพท์ในระบบอีกครั้งนะครับ🙏`
-          }]
+          messages: [getAdminNoticeFlexMessage("❌ ไม่พบข้อมูล", `ขออภัยไม่พบข้อมูลสมาชิกของเบอร์ ${phoneNumber} ในระบบสะสมแต้ม\n\nหากเพิ่งสมัครใหม่ รบกวนแจ้งพนักงานหน้าร้านเพื่อตรวจสอบการคีย์เบอร์โทรศัพท์ในระบบอีกครั้งนะครับ🙏`)]
         });
       }
     } catch (error) {
       console.error('Error in handleEvent:', error);
       return client.replyMessage({
         replyToken: event.replyToken,
-        messages: [{
-          type: 'text',
-          text: 'เกิดข้อผิดพลาดในการดึงข้อมูลแต้ม กรุณาลองใหม่อีกครั้งในภายหลังครับ'
-        }]
+        messages: [getAdminNoticeFlexMessage("❌ เกิดข้อผิดพลาด", "ไม่สามารถดึงข้อมูลแต้มได้ กรุณาลองใหม่อีกครั้ง")]
       });
     }
   }
 
-  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "แต้ม" (ดึงเบอร์จาก MongoDB มาเช็คให้ผ่าน Flex Message)
+  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "แต้ม"
   const isOnlyCheckPoints = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม' || userMessage === 'แต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
 
@@ -452,10 +582,7 @@ async function handleEvent(event) {
     if (!savedPhone) {
       return client.replyMessage({
         replyToken: event.replyToken,
-        messages: [{
-          type: 'text',
-          text: 'สวัสดีครับ 🐾 ยินดีต้อนรับสู่ระบบสะสมแต้ม!\n\n✨ สำหรับการใช้งานครั้งแรก:\nกรุณาพิมพ์คำว่า "เช็คแต้ม" ตามด้วยเบอร์โทรศัพท์ของคุณติดกัน (เช่น เช็คแต้ม0812345678) เพื่อให้ระบบบันทึกความจำไว้ครับ\n\n🔄 สำหรับการใช้งานครั้งถัดไป:\nสามารถกดปุ่ม "วิธีเช็คแต้ม" ที่เมนูด้านล่าง หรือพิมพ์คำว่า "แต้ม" เฉยๆ เพื่อตรวจสอบยอดได้ทันทีโดยไม่ต้องพิมพ์เบอร์ซ้ำครับ! 😊'
-        }]
+        messages: [getWelcomeHelpFlexMessage()]
       });
     }
 
@@ -472,20 +599,14 @@ async function handleEvent(event) {
       } else {
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [{
-            type: 'text',
-            text: `❌ ไม่พบข้อมูลสมาชิกของเบอร์ที่บันทึกไว้ (${savedPhone})\nกรุณาพิมพ์ "เช็คแต้ม" ตามด้วยเบอร์ใหม่อีกครั้งเพื่ออัปเดตครับ`
-          }]
+          messages: [getAdminNoticeFlexMessage("❌ ไม่พบข้อมูลสมาชิก", `ไม่พบข้อมูลของเบอร์ที่บันทึกไว้ (${savedPhone})\nกรุณาพิมพ์ "เช็คแต้ม" ตามด้วยเบอร์ใหม่อีกครั้งเพื่ออัปเดตครับ`)]
         });
       }
     } catch (error) {
       console.error('Error in MongoDB check:', error);
       return client.replyMessage({
         replyToken: event.replyToken,
-        messages: [{
-          type: 'text',
-          text: 'เกิดข้อผิดพลาดในการดึงข้อมูลแต้ม กรุณาลองใหม่อีกครั้งในภายหลังครับ'
-        }]
+        messages: [getAdminNoticeFlexMessage("❌ เกิดข้อผิดพลาด", "ไม่สามารถดึงข้อมูลแต้มได้ กรุณาลองใหม่อีกครั้ง")]
       });
     }
   }
@@ -508,13 +629,12 @@ cron.schedule('0 22 * * *', async () => {
   if (!salesData) return;
 
   const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-  const messageText = `📈 สรุปยอดขาย & กำไรประจำวัน 📈\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล\n\nขอบคุณสำหรับความตั้งใจทำงานในวันนี้ครับ! ✨`;
 
-  // ส่งรายงานไปยังแอดมินคนแรกในรายชื่ออัตโนมัติ
+  // ส่งรายงานไปยังแอดมินคนแรกในรูปแบบ Flex Message
   try {
     await client.pushMessage({
       to: ADMIN_IDS[0],
-      messages: [{ type: 'text', text: messageText }]
+      messages: [getSalesFlexMessage(salesData, todayStr)]
     });
     console.log('✅ ส่งรายงานยอดขายประจำวันเรียบร้อย!');
   } catch (err) {
