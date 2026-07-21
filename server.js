@@ -277,7 +277,7 @@ function getRewardFlexMessage() {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600&auto=format&fit=crop&q=60",
+            url: "https://i.postimg.cc/W4dqm6J4/IMG-5627.png",
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
@@ -286,8 +286,8 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "ส่วนลด 50 บาท", weight: "bold", size: "xl", color: "#1DB446" },
-              { type: "text", text: "ใช้ 50 แต้มสะสมแลกรับส่วนลดทันที", size: "sm", color: "#666666", margin: "md", wrap: true }
+              { type: "text", text: "ของรางวัลสุดพิเพษ", weight: "bold", size: "xl", color: "#1DB446" },
+              { type: "text", text: "ใช้ 2000 แต้มสะสมแลกรับทันที", size: "sm", color: "#666666", margin: "md", wrap: true }
             ]
           },
           footer: {
@@ -296,7 +296,7 @@ function getRewardFlexMessage() {
             contents: [
               {
                 type: "button",
-                action: { type: "message", label: "กดแลกรางวัล (50 แต้ม)", text: "#แลกรางวัล 50 ส่วนลด 50" },
+                action: { type: "message", label: "กดแลกรางวัล (2000 แต้ม)", text: "#แลกรางวัล 2000 แต้ม" },
                 style: "primary",
                 color: "#1DB446"
               }
@@ -307,7 +307,7 @@ function getRewardFlexMessage() {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&auto=format&fit=crop&q=60",
+            url: "https://i.postimg.cc/W4dqm6J4/IMG-5627.png",
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
@@ -316,8 +316,8 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "แก้วน้ำพรีเมียม Casper", weight: "bold", size: "xl", color: "#0066cc" },
-              { type: "text", text: "ใช้ 100 แต้มสะสมแลกรับของที่ระลึกสุดน่ารัก", size: "sm", color: "#666666", margin: "md", wrap: true }
+              { type: "text", text: "ของรางวัลสุดพิเศษ", weight: "bold", size: "xl", color: "#0066cc" },
+              { type: "text", text: "ใช้ 1000 แต้มสะสมแลกรับของที่ระลึกสุดน่ารัก", size: "sm", color: "#666666", margin: "md", wrap: true }
             ]
           },
           footer: {
@@ -326,7 +326,7 @@ function getRewardFlexMessage() {
             contents: [
               {
                 type: "button",
-                action: { type: "message", label: "กดแลกรางวัล (100 แต้ม)", text: "#แลกรางวัล 100 แก้วน้ำ Casper" },
+                action: { type: "message", label: "กดแลกรางวัล (1000 แต้ม)", text: "#แลกรางวัล 1000 แลกรับของที่ระลึกสุดน่ารัก" },
                 style: "primary",
                 color: "#0066cc"
               }
