@@ -58,7 +58,7 @@ const LINE_CHANNEL_ACCESS_TOKEN = (process.env.LINE_CHANNEL_ACCESS_TOKEN || '').
 const LINE_CHANNEL_SECRET = (process.env.LINE_CHANNEL_SECRET || '').trim();
 const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
 
-// กำหนดรายชื่อแอดมิน (รวม User ID จากภาพของคุณเรียบร้อยแล้ว)
+// กำหนดรายชื่อแอดมิน
 const ADMIN_IDS = [
   "U319eWJh8J6Mx9DrGXKEv3ojKmqw8Cv9pscK",
   "Ub77ae405833d4efcca7bd15017109f14"
@@ -383,7 +383,7 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
 
   return {
     type: "flex",
-    altText: `✨ ยอดแต้มสะสมของคุณ ${customerName}`,
+    altText: `✨ บัตรสะสมแต้มสมาชิกของคุณ ${customerName}`,
     contents: {
       type: "bubble",
       header: {
@@ -391,7 +391,7 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
         layout: "vertical",
         contents: [
           { type: "text", text: "🐾 CASPER PETSHOP 🐾", weight: "bold", size: "xs", color: "#ffffff", align: "center" },
-          { type: "text", text: "สมาชิกผู้ทรงเกียรติ", weight: "bold", size: "md", color: "#ffffff", align: "center", margin: "xs" }
+          { type: "text", text: "บัตรสะสมแต้มสมาชิก", weight: "bold", size: "md", color: "#ffffff", align: "center", margin: "sm" }
         ],
         backgroundColor: "#ff7f50",
         paddingAll: "lg"
@@ -457,7 +457,6 @@ async function handleEvent(event) {
   const lowerMsg = userMessage.toLowerCase();
   const senderId = event.source.userId;
 
-  // ตรวจสอบไอดี (รองรับทั้งพิมพ์เล็กพิมพ์ใหญ่ เช่น id, ID, ไอดีฉัน)
   if (lowerMsg === "ไอดีฉัน" || lowerMsg === "id") {
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -465,7 +464,6 @@ async function handleEvent(event) {
     });
   }
 
-  // คำสั่งแอดมิน: เปลี่ยนริชเมนู
   if (userMessage.startsWith("#เปลี่ยนริชเมนู")) {
     if (!ADMIN_IDS.includes(senderId)) {
       return Promise.resolve(null);
@@ -491,7 +489,6 @@ async function handleEvent(event) {
     });
   }
 
-  // คำสั่งแอดมิน: ดูยอดขายและกำไร (ตรวจสอบสิทธิ์จาก ADMIN_IDS)
   if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
     if (!ADMIN_IDS.includes(senderId)) {
       return client.replyMessage({
@@ -516,7 +513,6 @@ async function handleEvent(event) {
     });
   }
 
-  // ของรางวัล
   if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น") {
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -560,7 +556,6 @@ async function handleEvent(event) {
     });
   }
 
-  // เช็คแต้มพร้อมเบอร์
   const matchWithPhone = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
 
   if (matchWithPhone) {
@@ -592,7 +587,6 @@ async function handleEvent(event) {
     }
   }
 
-  // เช็คแต้มแบบปกติ
   const isOnlyCheckPoints = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม' || userMessage === 'แต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
 
