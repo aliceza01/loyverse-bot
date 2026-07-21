@@ -299,7 +299,7 @@ function getRewardFlexMessage() {
                 action: {
                   type: "uri",
                   label: "ดูสินค้าอาหารหมา",
-                  uri: "https://liff.line.me/YOUR_LIFF_ID_DOG"
+                  uri: "https://liff.line.me/2006880893-YOUR_DOG_ID" // เปลี่ยนลิงก์ LIFF อาหารหมาตรงนี้
                 },
                 style: "primary",
                 color: "#ff7f50"
@@ -333,7 +333,7 @@ function getRewardFlexMessage() {
                 action: {
                   type: "uri",
                   label: "ดูอาหารแมว",
-                  uri: "https://liff.line.me/YOUR_LIFF_ID_CAT"
+                  uri: "https://liff.line.me/2010783485-TIIRDjGm" // เปลี่ยนลิงก์ LIFF อาหารแมวตรงนี้
                 },
                 style: "primary",
                 color: "#1DB446"
@@ -367,7 +367,7 @@ function getRewardFlexMessage() {
                 action: {
                   type: "uri",
                   label: "ดูอุปกรณ์และปลา",
-                  uri: "https://liff.line.me/YOUR_LIFF_ID_FISH"
+                  uri: "https://liff.line.me/2006880893-YOUR_FISH_ID" // เปลี่ยนลิงก์ LIFF อุปกรณ์ตรงนี้
                 },
                 style: "primary",
                 color: "#0066cc"
