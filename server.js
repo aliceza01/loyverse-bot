@@ -73,7 +73,7 @@ const lineConfig = {
 };
 const client = new line.messagingApi.MessagingApiClient(lineConfig);
 
-// ฟังก์ชันสำหรับบังคับเปลี่ยน Default Rich Menu ให้กับผู้ใช้ทุกคนผ่าน API (อัปเดตให้ลูกค้าทุกคนพร้อมกันทันที)
+// ฟังก์ชันสำหรับบังคับเปลี่ยน Default Rich Menu ให้กับผู้ใช้ทุกคนผ่าน API
 async function setDefaultRichMenuGlobal(richMenuId) {
   try {
     await client.setDefaultRichMenu(richMenuId);
@@ -140,10 +140,9 @@ async function getDailySales() {
 }
 
 // ==========================================
-// 4. ฟังก์ชันการทำงานของ LINE Bot (จัดการข้อความ & ออกแบบ Flex Message)
+// 4. ฟังก์ชันการทำงานของ LINE Bot (ดีไซน์ Flex Message ใหม่ทั้งหมด)
 // ==========================================
 
-// ค้นหาข้อมูลลูกค้าใน Loyverse ด้วยเบอร์โทรศัพท์ (วนลูปตาม Cursor)
 async function findCustomerByPhone(phoneNumber) {
   let cursor = null;
 
@@ -182,7 +181,7 @@ async function findCustomerByPhone(phoneNumber) {
   return null;
 }
 
-// --- รวมฟังก์ชัน Flex Message ดีไซน์สวยงาม ---
+// --- ฟังก์ชันออกแบบ Flex Message ให้ดูสวยงาม พรีเมียม ---
 
 function getUserIdFlexMessage(userId) {
   return {
@@ -194,7 +193,7 @@ function getUserIdFlexMessage(userId) {
         type: "box",
         layout: "vertical",
         contents: [
-          { type: "text", text: "🆔 LINE User ID", weight: "bold", size: "md", color: "#555555" },
+          { type: "text", text: "🆔 LINE User ID", weight: "bold", size: "md", color: "#333333" },
           { type: "text", text: userId, size: "xs", color: "#888888", wrap: true, margin: "md" }
         ]
       }
@@ -212,8 +211,8 @@ function getAdminNoticeFlexMessage(title, description) {
         type: "box",
         layout: "vertical",
         contents: [
-          { type: "text", text: title, weight: "bold", size: "md", color: "#1DB446", wrap: true },
-          { type: "text", text: description, size: "sm", color: "#666666", wrap: true, margin: "md" }
+          { type: "text", text: title, weight: "bold", size: "md", color: "#ff7f50", wrap: true },
+          { type: "text", text: description, size: "sm", color: "#555555", wrap: true, margin: "md" }
         ]
       }
     }
@@ -233,7 +232,7 @@ function getSalesFlexMessage(salesData, todayStr) {
           { type: "text", text: "📈 สรุปยอดขาย & กำไร", weight: "bold", size: "lg", color: "#ffffff", align: "center" },
           { type: "text", text: `📅 ${todayStr}`, size: "xs", color: "#ffffff", align: "center", margin: "sm" }
         ],
-        backgroundColor: "#0066cc",
+        backgroundColor: "#111111",
         paddingAll: "lg"
       },
       body: {
@@ -245,7 +244,7 @@ function getSalesFlexMessage(salesData, todayStr) {
             layout: "horizontal",
             contents: [
               { type: "text", text: "💵 ยอดขายรวม", size: "sm", color: "#555555" },
-              { type: "text", text: `${salesData.totalSales} ฿`, size: "sm", weight: "bold", color: "#0066cc", align: "end" }
+              { type: "text", text: `${salesData.totalSales} ฿`, size: "sm", weight: "bold", color: "#111111", align: "end" }
             ],
             margin: "md"
           },
@@ -346,7 +345,54 @@ function getRewardFlexMessage() {
   };
 }
 
-function getPointFlexMessage(customerName, points, phone) {
+// 🌟 ปรับดีไซน์การ์ดแต้มใหม่ให้สวยหรู มินิมอล และรวมข้อความบันทึกเบอร์ไว้ด้านบนสุดในใบเดียว
+function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
+  const contentsList = [];
+
+  // หากเป็นการบันทึกเบอร์ใหม่ ให้ใส่กล่องแจ้งเตือนสถานะไว้ด้านบนสุดของการ์ดเลย
+  if (isNewSaved) {
+    contentsList.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "📌", size: "xs", flex: 0 },
+        { type: "text", text: `บันทึกเบอร์ ${phone} สำเร็จ!`, size: "xs", weight: "bold", color: "#1DB446", margin: "sm" }
+      ],
+      backgroundColor: "#f0fdf4",
+      paddingAll: "sm",
+      cornerRadius: "md",
+      margin: "none"
+    });
+    contentsList.push({ type: "separator", margin: "md" });
+  }
+
+  // ข้อมูลชื่อและเบอร์โทร
+  contentsList.push({
+    type: "box",
+    layout: "vertical",
+    contents: [
+      { type: "text", text: `คุณ ${customerName || 'ลูกค้าคนสำคัญ'}`, weight: "bold", size: "md", color: "#333333", align: "center" },
+      { type: "text", text: `เบอร์โทรศัพท์: ${phone}`, size: "xs", color: "#888888", align: "center", margin: "xs" }
+    ],
+    margin: "md"
+  });
+
+  contentsList.push({ type: "separator", margin: "lg" });
+
+  // กล่องแสดงแต้มสะสมตัวใหญ่ชัดเจน
+  contentsList.push({
+    type: "box",
+    layout: "vertical",
+    contents: [
+      { type: "text", text: `${points}`, weight: "bold", size: "4xl", color: "#ff7f50", align: "center" },
+      { type: "text", text: "✨ แต้มสะสมของคุณ ✨", size: "xs", color: "#aaaaaa", align: "center", margin: "sm" }
+    ],
+    margin: "lg",
+    backgroundColor: "#fffaf5",
+    paddingAll: "md",
+    cornerRadius: "lg"
+  });
+
   return {
     type: "flex",
     altText: `✨ ยอดแต้มสะสมของคุณ ${customerName}`,
@@ -357,7 +403,7 @@ function getPointFlexMessage(customerName, points, phone) {
         layout: "vertical",
         contents: [
           { type: "text", text: "🐾 CASPER PETSHOP 🐾", weight: "bold", size: "xs", color: "#ffffff", align: "center" },
-          { type: "text", text: "ยอดแต้มสะสมของคุณ", weight: "bold", size: "lg", color: "#ffffff", align: "center", margin: "sm" }
+          { type: "text", text: "สมาชิกผู้ทรงเกียรติ", weight: "bold", size: "md", color: "#ffffff", align: "center", margin: "xs" }
         ],
         backgroundColor: "#ff7f50",
         paddingAll: "lg"
@@ -365,20 +411,7 @@ function getPointFlexMessage(customerName, points, phone) {
       body: {
         type: "box",
         layout: "vertical",
-        contents: [
-          { type: "text", text: `คุณ ${customerName || 'ลูกค้าคนสำคัญ'}`, weight: "bold", size: "md", align: "center" },
-          { type: "text", text: `เบอร์โทร: ${phone}`, size: "xs", color: "#aaaaaa", align: "center", margin: "sm" },
-          { type: "separator", margin: "xxl" },
-          {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              { type: "text", text: `${points}`, weight: "bold", size: "3xl", color: "#ff7f50", align: "center" },
-              { type: "text", text: "แต้มสะสม", size: "sm", color: "#888888", align: "center" }
-            ],
-            margin: "xxl"
-          }
-        ]
+        contents: contentsList
       },
       footer: {
         type: "box",
@@ -386,8 +419,8 @@ function getPointFlexMessage(customerName, points, phone) {
         contents: [
           {
             type: "button",
-            action: { type: "message", label: "🎁 ดูของรางวัล", text: "ของรางวัล" },
-            style: "secondary",
+            action: { type: "message", label: "🎁 กดดูของรางวัล", text: "ของรางวัล" },
+            style: "primary",
             color: "#ff7f50"
           }
         ]
@@ -409,7 +442,7 @@ function getWelcomeHelpFlexMessage() {
           { type: "text", text: "🐾 CASPER PETSHOP 🐾", weight: "bold", size: "sm", color: "#ffffff", align: "center" },
           { type: "text", text: "ระบบสมาชิก & สะสมแต้ม", weight: "bold", size: "md", color: "#ffffff", align: "center", margin: "sm" }
         ],
-        backgroundColor: "#1DB446",
+        backgroundColor: "#111111",
         paddingAll: "md"
       },
       body: {
@@ -436,7 +469,6 @@ async function handleEvent(event) {
   const userMessage = event.message.text.trim();
   const senderId = event.source.userId;
 
-  // 0.0 คำสั่งเช็ค User ID ของตัวเอง
   if (userMessage === "ไอดีฉัน" || userMessage === "id") {
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -444,7 +476,6 @@ async function handleEvent(event) {
     });
   }
 
-  // 0.1 คำสั่งสำหรับแอดมิน: บังคับอัปเดต Rich Menu ใหม่ให้ลูกค้าทุกคนทันที
   if (userMessage.startsWith("#เปลี่ยนริชเมนู")) {
     if (!ADMIN_IDS.includes(senderId)) {
       return Promise.resolve(null);
@@ -464,13 +495,12 @@ async function handleEvent(event) {
       messages: [
         getAdminNoticeFlexMessage(
           success ? "✅ สำเร็จ" : "❌ ล้มเหลว",
-          success ? `สั่งอัปเดต Rich Menu (${newRichMenuId}) ให้ลูกค้าทุกคนเรียบร้อยแล้วครับ!` : "อัปเดตไม่สำเร็จ ตรวจสอบ ID หรือ Log ของ Server อีกครั้ง"
+          success ? `สั่งอัปเดต Rich Menu (${newRichMenuId}) ให้ลูกค้าทุกคนเรียบร้อยแล้วครับ!` : "อัปเดตไม่สำเร็จ ตรวจสอบ ID หรือ Log อีกครั้ง"
         )
       ]
     });
   }
 
-  // 0.2 คำสั่งเรียกดูยอดขายและกำไร (ล็อกเฉพาะกลุ่มแอดมินเท่านั้น!)
   if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
     if (!ADMIN_IDS.includes(senderId)) {
       return Promise.resolve(null);
@@ -492,7 +522,6 @@ async function handleEvent(event) {
     });
   }
 
-  // 1. คำสั่งแสดงของรางวัล
   if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น") {
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -500,7 +529,6 @@ async function handleEvent(event) {
     });
   }
 
-  // 2. คำสั่งเมื่อลูกค้ากดปุ่มแลกรางวัล
   if (userMessage.startsWith("#แลกรางวัล")) {
     const rawContent = userMessage.replace("#แลกรางวัล", "").trim();
     const firstSpaceIndex = rawContent.indexOf(" ");
@@ -537,7 +565,7 @@ async function handleEvent(event) {
     });
   }
 
-  // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์
+  // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์ (รวมร่างใส่การ์ดเดียว)
   const matchWithPhone = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
 
   if (matchWithPhone) {
@@ -552,10 +580,7 @@ async function handleEvent(event) {
         const customerName = matchedCustomer.name || 'ลูกค้า';
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [
-            getAdminNoticeFlexMessage("📌 บันทึกเบอร์โทรศัพท์เรียบร้อย", `ระบบบันทึกเบอร์ ${phoneNumber} สำเร็จแล้วครับ`),
-            getPointFlexMessage(customerName, points, phoneNumber)
-          ]
+          messages: [getPointFlexMessage(customerName, points, phoneNumber, true)] // เปิดใช้โหมดแจ้งเตือนบันทึกเบอร์สำเร็จในการ์ดเดียวกัน
         });
       } else {
         return client.replyMessage({
@@ -572,7 +597,7 @@ async function handleEvent(event) {
     }
   }
 
-  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "แต้ม"
+  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "แต้ม" (ดึงเบอร์จาก MongoDB มาโชว์แบบการ์ดพรีเมียม)
   const isOnlyCheckPoints = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม' || userMessage === 'แต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
 
@@ -594,7 +619,7 @@ async function handleEvent(event) {
         const customerName = matchedCustomer.name || 'ลูกค้า';
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [getPointFlexMessage(customerName, points, savedPhone)]
+          messages: [getPointFlexMessage(customerName, points, savedPhone, false)]
         });
       } else {
         return client.replyMessage({
@@ -630,7 +655,6 @@ cron.schedule('0 22 * * *', async () => {
 
   const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  // ส่งรายงานไปยังแอดมินคนแรกในรูปแบบ Flex Message
   try {
     await client.pushMessage({
       to: ADMIN_IDS[0],
