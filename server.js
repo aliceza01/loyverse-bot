@@ -53,7 +53,6 @@ async function saveUserData(lineUserId, phone) {
   }
 }
 
-
 // ==========================================
 // 1. ดึงค่า Environment Variables จาก .env
 // ==========================================
@@ -62,6 +61,8 @@ const LINE_CHANNEL_SECRET = (process.env.LINE_CHANNEL_SECRET || '').trim();
 const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
 const TARGET_USER_OR_GROUP_ID = (process.env.TARGET_USER_OR_GROUP_ID || '').trim();
 
+// แปลงค่ารายชื่อแอดมินให้รองรับหลายคน (คั่นด้วยเครื่องหมาย ,)
+const ADMIN_IDS = TARGET_USER_OR_GROUP_ID.split(',').map(id => id.trim()).filter(id => id);
 
 // ตั้งค่า LINE Bot
 const lineConfig = {
@@ -70,14 +71,24 @@ const lineConfig = {
 };
 const client = new line.messagingApi.MessagingApiClient(lineConfig);
 
+// ฟังก์ชันสำหรับบังคับเปลี่ยน Default Rich Menu ให้กับผู้ใช้ทุกคนผ่าน API (อัปเดตให้ลูกค้าทุกคนพร้อมกันทันที)
+async function setDefaultRichMenuGlobal(richMenuId) {
+  try {
+    await client.setDefaultRichMenu(richMenuId);
+    console.log(`✅ บังคับเปลี่ยน Default Rich Menu เป็น ID: ${richMenuId} สำเร็จเรียบร้อย!`);
+    return true;
+  } catch (error) {
+    console.error('❌ ไม่สามารถเปลี่ยน Default Rich Menu ได้:', error.message);
+    return false;
+  }
+}
 
 // ==========================================
 // 2. Webhook & Endpoint สำหรับ LINE
 // ==========================================
 app.get('/', (req, res) => {
-  res.send('Loyverse Bot & Daily Report Service is running with MongoDB!');
+  res.send('Loyverse Bot & Daily Report Service is running with MongoDB & Multi-Admin Rich Menu!');
 });
-
 
 app.post('/webhook', line.middleware(lineConfig), (req, res) => {
   Promise
@@ -89,7 +100,6 @@ app.post('/webhook', line.middleware(lineConfig), (req, res) => {
     });
 });
 
-
 // ==========================================
 // 3. ฟังก์ชันดึงข้อมูลยอดขายและกำไร
 // ==========================================
@@ -99,16 +109,13 @@ async function getDailySales() {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
-
     const response = await axios.get('https://api.loyverse.com/v1.0/receipts', {
       headers: { 'Authorization': `Bearer ${LOYVERSE_TOKEN}` },
       params: { created_at_min: startOfDay, created_at_max: endOfDay, limit: 250 }
     });
 
-
     const receipts = response.data.receipts || [];
     let totalSales = 0, totalCost = 0;
-
 
     receipts.forEach(receipt => {
       totalSales += receipt.total_money || 0;
@@ -118,7 +125,6 @@ async function getDailySales() {
         });
       }
     });
-
 
     return {
       totalSales: totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -131,23 +137,19 @@ async function getDailySales() {
   }
 }
 
-
 // ==========================================
 // 4. ฟังก์ชันการทำงานของ LINE Bot (จัดการข้อความ)
 // ==========================================
 
-
 // ค้นหาข้อมูลลูกค้าใน Loyverse ด้วยเบอร์โทรศัพท์ (วนลูปตาม Cursor)
 async function findCustomerByPhone(phoneNumber) {
   let cursor = null;
-
 
   do {
     let url = `https://api.loyverse.com/v1.0/customers?limit=250`;
     if (cursor) {
       url += `&cursor=${cursor}`;
     }
-
 
     try {
       const response = await axios.get(url, {
@@ -157,18 +159,15 @@ async function findCustomerByPhone(phoneNumber) {
         }
       });
 
-
       const customers = response.data.customers || [];
       const matchedCustomer = customers.find(c => {
         const phoneInSystem = c.phone_number ? c.phone_number.replace(/\s+/g, '') : '';
         return phoneInSystem === phoneNumber;
       });
 
-
       if (matchedCustomer) {
         return matchedCustomer;
       }
-
 
       cursor = response.data.cursor;
     } catch (error) {
@@ -176,19 +175,16 @@ async function findCustomerByPhone(phoneNumber) {
       break;
     }
 
-
   } while (cursor);
-
 
   return null;
 }
 
-
-// สร้าง Flex Message แสดงของรางวัล
+// สร้าง Flex Message สวยๆ สำหรับแสดงของรางวัล
 function getRewardFlexMessage() {
   return {
     type: "flex",
-    altText: "รายการของรางวัลสะสมแต้ม 🎁",
+    altText: "🎁 รายการของรางวัลสะสมแต้ม แคสเปอร์ เพ็ทช็อป",
     contents: {
       type: "carousel",
       contents: [
@@ -205,8 +201,8 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "ส่วนลด 50 บาท", weight: "bold", size: "xl" },
-              { type: "text", text: "ใช้ 50 แต้มสะสม", size: "sm", color: "#888888", margin: "md" }
+              { type: "text", text: "ส่วนลด 50 บาท", weight: "bold", size: "xl", color: "#1DB446" },
+              { type: "text", text: "ใช้ 50 แต้มสะสมแลกรับส่วนลดทันที", size: "sm", color: "#666666", margin: "md", wrap: true }
             ]
           },
           footer: {
@@ -217,7 +213,7 @@ function getRewardFlexMessage() {
                 type: "button",
                 action: { type: "message", label: "กดแลกรางวัล (50 แต้ม)", text: "#แลกรางวัล 50 ส่วนลด 50" },
                 style: "primary",
-                color: "#ff7f50"
+                color: "#1DB446"
               }
             ]
           }
@@ -235,8 +231,8 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "แก้วน้ำ Casper", weight: "bold", size: "xl" },
-              { type: "text", text: "ใช้ 100 แต้มสะสม", size: "sm", color: "#888888", margin: "md" }
+              { type: "text", text: "แก้วน้ำพรีเมียม Casper", weight: "bold", size: "xl", color: "#0066cc" },
+              { type: "text", text: "ใช้ 100 แต้มสะสมแลกรับของที่ระลึกสุดน่ารัก", size: "sm", color: "#666666", margin: "md", wrap: true }
             ]
           },
           footer: {
@@ -247,7 +243,7 @@ function getRewardFlexMessage() {
                 type: "button",
                 action: { type: "message", label: "กดแลกรางวัล (100 แต้ม)", text: "#แลกรางวัล 100 แก้วน้ำ Casper" },
                 style: "primary",
-                color: "#4682b4"
+                color: "#0066cc"
               }
             ]
           }
@@ -257,6 +253,56 @@ function getRewardFlexMessage() {
   };
 }
 
+// สร้าง Flex Message สวยๆ สำหรับแสดงแต้มสะสมของลูกค้า
+function getPointFlexMessage(customerName, points, phone) {
+  return {
+    type: "flex",
+    altText: `✨ ยอดแต้มสะสมของคุณ ${customerName}`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: "🐾 CASPER PETSHOP 🐾", weight: "bold", size: "xs", color: "#ffffff", align: "center" },
+          { type: "text", text: "ยอดแต้มสะสมของคุณ", weight: "bold", size: "lg", color: "#ffffff", align: "center", margin: "sm" }
+        ],
+        backgroundColor: "#ff7f50",
+        paddingAll: "lg"
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: `คุณ ${customerName || 'ลูกค้าคนสำคัญ'}`, weight: "bold", size: "md", align: "center" },
+          { type: "text", text: `เบอร์โทร: ${phone}`, size: "xs", color: "#aaaaaa", align: "center", margin: "sm" },
+          { type: "separator", margin: "xxl" },
+          {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              { type: "text", text: `${points}`, weight: "bold", size: "3xl", color: "#ff7f50", align: "center" },
+              { type: "text", text: "แต้มสะสม", size: "sm", color: "#888888", align: "center" }
+            ],
+            margin: "xxl"
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            action: { type: "message", label: "🎁 ดูของรางวัล", text: "ของรางวัล" },
+            style: "secondary",
+            color: "#ff7f50"
+          }
+        ]
+      }
+    }
+  };
+}
 
 // จัดการข้อความที่ส่งมาจาก LINE
 async function handleEvent(event) {
@@ -264,26 +310,48 @@ async function handleEvent(event) {
     return Promise.resolve(null);
   }
 
-
   const userMessage = event.message.text.trim();
-  const senderId = event.source.userId; // ดึง User ID ของคนที่พิมพ์เข้ามา
+  const senderId = event.source.userId;
 
+  // 0.1 คำสั่งสำหรับแอดมิน: บังคับอัปเดต Rich Menu ใหม่ให้ลูกค้าทุกคนทันที (ผ่านแชท)
+  if (userMessage.startsWith("#เปลี่ยนริชเมนู")) {
+    if (!ADMIN_IDS.includes(senderId)) {
+      return Promise.resolve(null);
+    }
 
-  // 0. คำสั่งเรียกดูยอดขายและกำไร (ล็อกเฉพาะ User ID ของคุณเท่านั้น!)
+    const newRichMenuId = userMessage.replace("#เปลี่ยนริชเมนู", "").trim();
+    if (!newRichMenuId) {
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{ type: 'text', text: '❌ กรุณาใส่ Rich Menu ID ต่อท้ายด้วย เช่น #เปลี่ยนริชเมนู 9408661' }]
+      });
+    }
+
+    const success = await setDefaultRichMenuGlobal(newRichMenuId);
+    return client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ 
+        type: 'text', 
+        text: success 
+          ? `✅ สั่งอัปเดต Rich Menu (${newRichMenuId}) ให้ลูกค้าทุกคนเรียบร้อยแล้วครับ!` 
+          : '❌ อัปเดตไม่สำเร็จ ตรวจสอบ ID หรือ Log ของ Server อีกครั้ง' 
+      }]
+    });
+  }
+
+  // 0.2 คำสั่งเรียกดูยอดขายและกำไร (ล็อกเฉพาะกลุ่มแอดมินเท่านั้น!)
   if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
-    if (senderId !== TARGET_USER_OR_GROUP_ID) {
+    if (!ADMIN_IDS.includes(senderId)) {
       console.log(`⚠️ มีคนอื่นพยายามดูยอดขาย (UserId: ${senderId}) ระบบไม่อนุญาต`);
       return Promise.resolve(null);
     }
 
-
     const salesData = await getDailySales();
     const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-   
+    
     const replyText = salesData
       ? `📈 สรุปยอดขาย & กำไร (ณ ปัจจุบัน)\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล`
       : '❌ ไม่สามารถดึงข้อมูลยอดขายจากระบบได้ในขณะนี้';
-
 
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -291,24 +359,21 @@ async function handleEvent(event) {
     });
   }
 
-
-  // 1. คำสั่งแสดงของรางวัล
-  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
+  // 1. คำสั่งแสดงของรางวัล (ส่ง Flex Message)
+  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น") {
     return client.replyMessage({
       replyToken: event.replyToken,
       messages: [getRewardFlexMessage()]
     });
   }
 
-
   // 2. คำสั่งเมื่อลูกค้ากดปุ่มแลกรางวัล
   if (userMessage.startsWith("#แลกรางวัล")) {
     const rawContent = userMessage.replace("#แลกรางวัล", "").trim();
     const firstSpaceIndex = rawContent.indexOf(" ");
-   
+    
     let requiredPoints = 0;
     let rewardName = "";
-
 
     if (firstSpaceIndex !== -1) {
       requiredPoints = parseFloat(rawContent.substring(0, firstSpaceIndex)) || 0;
@@ -316,7 +381,6 @@ async function handleEvent(event) {
     } else {
       rewardName = rawContent;
     }
-
 
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -327,30 +391,25 @@ async function handleEvent(event) {
     });
   }
 
-
   // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์ (บันทึกลง MongoDB ถาวร)
   const matchWithPhone = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
 
-
   if (matchWithPhone) {
     const phoneNumber = matchWithPhone[1];
-   
-    // บันทึกลง MongoDB
     await saveUserData(senderId, phoneNumber);
-
 
     try {
       const matchedCustomer = await findCustomerByPhone(phoneNumber);
 
-
       if (matchedCustomer) {
         const points = matchedCustomer.total_points || 0;
+        const customerName = matchedCustomer.name || 'ลูกค้า';
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [{
-            type: 'text',
-            text: `📌 (บันทึกเบอร์เรียบร้อยครับ)\nสวัสดีครับ ${matchedCustomer.name || 'ลูกค้า'}\nตอนนี้มีแต้มสะสมทั้งหมด: ${points} แต้มครับ ✨`
-          }]
+          messages: [
+            { type: 'text', text: '📌 บันทึกเบอร์โทรศัพท์เรียบร้อยครับ! 🎉' },
+            getPointFlexMessage(customerName, points, phoneNumber)
+          ]
         });
       } else {
         return client.replyMessage({
@@ -361,8 +420,6 @@ async function handleEvent(event) {
           }]
         });
       }
-
-
     } catch (error) {
       console.error('Error in handleEvent:', error);
       return client.replyMessage({
@@ -375,41 +432,32 @@ async function handleEvent(event) {
     }
   }
 
-
-  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "#เช็คแต้ม" / "แต้ม" (ดึงเบอร์จาก MongoDB มาเช็คให้เลย)
+  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "แต้ม" (ดึงเบอร์จาก MongoDB มาเช็คให้ผ่าน Flex Message)
   const isOnlyCheckPoints = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม' || userMessage === 'แต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
-
 
   if (isOnlyCheckPoints || isOnlyPhoneNumber) {
     const savedPhone = await getUserData(senderId);
 
-
-    // ถ้ายังไม่เคยบันทึกเบอร์ไว้
     if (!savedPhone) {
       return client.replyMessage({
         replyToken: event.replyToken,
         messages: [{
           type: 'text',
-          text: 'สวัสดีครับ 🐾 ยินดีต้อนรับสู่ระบบสะสมแต้ม!\n\n✨ สำหรับการใช้งานครั้งแรก:\nกรุณาพิมพ์คำว่า "เช็คแต้ม" ตามด้วยเบอร์โทรศัพท์ของคุณติดกัน (เช่น เช็คแต้ม0812345678) เพื่อให้ระบบบันทึกความจำไว้ครับ\n\n🔄 สำหรับการใช้งานครั้งถัดไป:\nสามารถพิมพ์แค่คำว่า "เช็คแต้ม" หรือ "แต้ม" เฉยๆ เพื่อตรวจสอบยอดได้ทันทีโดยไม่ต้องพิมพ์เบอร์ซ้ำครับ! 😊'
+          text: 'สวัสดีครับ 🐾 ยินดีต้อนรับสู่ระบบสะสมแต้ม!\n\n✨ สำหรับการใช้งานครั้งแรก:\nกรุณาพิมพ์คำว่า "เช็คแต้ม" ตามด้วยเบอร์โทรศัพท์ของคุณติดกัน (เช่น เช็คแต้ม0812345678) เพื่อให้ระบบบันทึกความจำไว้ครับ\n\n🔄 สำหรับการใช้งานครั้งถัดไป:\nสามารถกดปุ่ม "วิธีเช็คแต้ม" ที่เมนูด้านล่าง หรือพิมพ์คำว่า "แต้ม" เฉยๆ เพื่อตรวจสอบยอดได้ทันทีโดยไม่ต้องพิมพ์เบอร์ซ้ำครับ! 😊'
         }]
       });
     }
 
-
-    // ถ้ามีเบอร์ที่จำไว้แล้ว ดึงแต้มให้ทันที
     try {
       const matchedCustomer = await findCustomerByPhone(savedPhone);
 
-
       if (matchedCustomer) {
         const points = matchedCustomer.total_points || 0;
+        const customerName = matchedCustomer.name || 'ลูกค้า';
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [{
-            type: 'text',
-            text: `🔍 ดึงข้อมูลจากเบอร์ที่บันทึกไว้ (${savedPhone}):\nสวัสดีครับ ${matchedCustomer.name || 'ลูกค้า'}\nตอนนี้มีแต้มสะสมทั้งหมด: ${points} แต้มครับ ✨\n\n*(หากต้องการเปลี่ยนเบอร์ ให้พิมพ์ เช็คแต้ม ตามด้วยเบอร์ใหม่ได้เลยครับ)*`
-          }]
+          messages: [getPointFlexMessage(customerName, points, savedPhone)]
         });
       } else {
         return client.replyMessage({
@@ -432,34 +480,30 @@ async function handleEvent(event) {
     }
   }
 
-
   return Promise.resolve(null);
 }
-
 
 // ==========================================
 // 5. ระบบส่งรายงานประจำวันอัตโนมัติ ( Cron Job เวลา 22:00 น. )
 // ==========================================
 cron.schedule('0 22 * * *', async () => {
   console.log('⏰ ถึงเวลา 22:00 น. เริ่มส่งรายงานประจำวัน...');
- 
-  if (!TARGET_USER_OR_GROUP_ID) {
+  
+  if (ADMIN_IDS.length === 0) {
     console.log('❌ ไม่พบ TARGET_USER_OR_GROUP_ID ใน .env');
     return;
   }
 
-
   const salesData = await getDailySales();
   if (!salesData) return;
-
 
   const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
   const messageText = `📈 สรุปยอดขาย & กำไรประจำวัน 📈\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล\n\nขอบคุณสำหรับความตั้งใจทำงานในวันนี้ครับ! ✨`;
 
-
+  // ส่งรายงานไปยังแอดมินคนแรกในรายชื่ออัตโนมัติ
   try {
     await client.pushMessage({
-      to: TARGET_USER_OR_GROUP_ID,
+      to: ADMIN_IDS[0],
       messages: [{ type: 'text', text: messageText }]
     });
     console.log('✅ ส่งรายงานยอดขายประจำวันเรียบร้อย!');
@@ -467,7 +511,6 @@ cron.schedule('0 22 * * *', async () => {
     console.error('❌ ส่งรายงานไม่สำเร็จ:', err.message);
   }
 }, { timezone: "Asia/Bangkok" });
-
 
 // ==========================================
 // 6. เริ่มต้นเปิด Server
