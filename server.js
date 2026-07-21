@@ -60,7 +60,7 @@ const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
 
 // กำหนดรายชื่อแอดมิน
 const ADMIN_IDS = [
-  "U319eWJh8J6Mx9DrGXKEv3ojKmqw8Cv9pscK",
+  "U31cdc39e686d827f23897b5da1431536",
   "Ub77ae405833d4efcca7bd15017109f14"
 ];
 
@@ -269,7 +269,7 @@ function getSalesFlexMessage(salesData, todayStr) {
 function getRewardFlexMessage() {
   return {
     type: "flex",
-    altText: "🎁 รายการของรางวัลสะสมแต้ม แคสเปอร์ เพ็ทช็อป",
+    altText: "🐾 เมนูสินค้าและโปรโมชั่น แคสเปอร์ เพ็ทช็อป",
     contents: {
       type: "carousel",
       contents: [
@@ -277,7 +277,7 @@ function getRewardFlexMessage() {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://i.postimg.cc/W4dqm6J4/IMG-5627.png",
+            url: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600&auto=format&fit=crop&q=60",
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
@@ -286,8 +286,8 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "ของรางวัลสุดพิเพษ", weight: "bold", size: "xl", color: "#1DB446" },
-              { type: "text", text: "ใช้ 2000 แต้มสะสมแลกรับทันที", size: "sm", color: "#666666", margin: "md", wrap: true }
+              { type: "text", text: "🐶 อาหารสุนัข", weight: "bold", size: "xl", color: "#ff7f50" },
+              { type: "text", text: "• อาหารเม็ด (เกรดพรีเมียม)\n• อาหารเปียก (ซอง/กระป๋อง)\n• ขนมหมา (สุนัขขบเคี้ยวฝึกวินัย)", size: "sm", color: "#666666", margin: "md", wrap: true }
             ]
           },
           footer: {
@@ -296,7 +296,37 @@ function getRewardFlexMessage() {
             contents: [
               {
                 type: "button",
-                action: { type: "message", label: "กดแลกรางวัล (2000 แต้ม)", text: "#แลกรางวัล 2000 แต้ม" },
+                action: { type: "message", label: "ดูสินค้าอาหารหมา", text: "อาหารหมา" },
+                style: "primary",
+                color: "#ff7f50"
+              }
+            ]
+          }
+        },
+        {
+          type: "bubble",
+          hero: {
+            type: "image",
+            url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&auto=format&fit=crop&q=60",
+            size: "full",
+            aspectRatio: "20:13",
+            aspectMode: "cover"
+          },
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              { type: "text", text: "🐱 อาหารแมว", weight: "bold", size: "xl", color: "#1DB446" },
+              { type: "text", text: "• อาหารเม็ด (บำรุงขนและสุขภาพ)\n• อาหารแมวเปียก (ซอง/กระป๋อง)\n• อาหารแมวเลีย (ของโปรดน้องแมว)", size: "sm", color: "#666666", margin: "md", wrap: true }
+            ]
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "button",
+                action: { type: "message", label: "ดูอาหารแมว", text: "อาหารแมว" },
                 style: "primary",
                 color: "#1DB446"
               }
@@ -307,7 +337,7 @@ function getRewardFlexMessage() {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://i.postimg.cc/W4dqm6J4/IMG-5627.png",
+            url: "https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?w=600&auto=format&fit=crop&q=60",
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
@@ -316,8 +346,8 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "ของรางวัลสุดพิเศษ", weight: "bold", size: "xl", color: "#0066cc" },
-              { type: "text", text: "ใช้ 1000 แต้มสะสมแลกรับของที่ระลึกสุดน่ารัก", size: "sm", color: "#666666", margin: "md", wrap: true }
+              { type: "text", text: "🐠 อุปกรณ์ & ปลาบอลลูน", weight: "bold", size: "xl", color: "#0066cc" },
+              { type: "text", text: "• อุปกรณ์สัตว์เลี้ยงทั่วไป\n• บริการอาบน้ำ-ตัดขน\n• ปลาบอลลูนและอุปกรณ์ตู้ปลา", size: "sm", color: "#666666", margin: "md", wrap: true }
             ]
           },
           footer: {
@@ -326,7 +356,7 @@ function getRewardFlexMessage() {
             contents: [
               {
                 type: "button",
-                action: { type: "message", label: "กดแลกรางวัล (1000 แต้ม)", text: "#แลกรางวัล 1000 แลกรับของที่ระลึกสุดน่ารัก" },
+                action: { type: "message", label: "ดูอุปกรณ์และปลา", text: "ปลาบอลลูน" },
                 style: "primary",
                 color: "#0066cc"
               }
@@ -407,7 +437,7 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
         contents: [
           {
             type: "button",
-            action: { type: "message", label: "🎁 กดดูของรางวัล", text: "ของรางวัล" },
+            action: { type: "message", label: "🎁 กดดูโปรโมชั่น", text: "โปรโมชั่น" },
             style: "primary",
             color: "#ff7f50"
           }
@@ -513,7 +543,7 @@ async function handleEvent(event) {
     });
   }
 
-  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น") {
+  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น" || userMessage === "อาหารหมา" || userMessage === "อาหารแมว" || userMessage === "ปลาบอลลูน") {
     return client.replyMessage({
       replyToken: event.replyToken,
       messages: [getRewardFlexMessage()]
