@@ -3,37 +3,56 @@ const express = require('express');
 const line = require('@line/bot-sdk');
 const axios = require('axios');
 const cron = require('node-cron');
-const fs = require('fs');
-const path = require('path');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 
 // ==========================================
-// 0. ระบบจัดการฐานข้อมูลไฟล์ JSON (บันทึกเบอร์ถาวร)
+// 0. ระบบจัดการฐานข้อมูล MongoDB (บันทึกเบอร์ถาวร)
 // ==========================================
-const DB_FILE = path.join(__dirname, 'users.json');
+const mongoUri = process.env.MONGODB_URI;
+const clientDb = new MongoClient(mongoUri);
 
-// ฟังก์ชันอ่านข้อมูลผู้ใช้จากไฟล์
-function loadUserData() {
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      const data = fs.readFileSync(DB_FILE, 'utf8');
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error('Error reading user data file:', error);
-  }
-  return {};
-}
+let usersCollection;
 
-// ฟังก์ชันบันทึกข้อมูลผู้ใช้ลงไฟล์
-function saveUserData(data) {
+async function connectDB() {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    await clientDb.connect();
+    const db = clientDb.db('loyverse_bot'); // ชื่อฐานข้อมูล
+    usersCollection = db.collection('users'); // ชื่อ Collection
+    console.log('✅ Connected to MongoDB successfully!');
   } catch (error) {
-    console.error('Error writing user data file:', error);
+    console.error('❌ MongoDB connection error:', error);
   }
 }
+connectDB();
+
+// ฟังก์ชันอ่านข้อมูลผู้ใช้จาก MongoDB
+async function getUserData(lineUserId) {
+  try {
+    if (!usersCollection) return null;
+    const user = await usersCollection.findOne({ lineUserId: lineUserId });
+    return user ? user.phone : null;
+  } catch (error) {
+    console.error('Error reading user data from MongoDB:', error);
+    return null;
+  }
+}
+
+// ฟังก์ชันบันทึกข้อมูลผู้ใช้ลง MongoDB
+async function saveUserData(lineUserId, phone) {
+  try {
+    if (!usersCollection) return;
+    await usersCollection.updateOne(
+      { lineUserId: lineUserId },
+      { $set: { phone: phone, updatedAt: new Date() } },
+      { upsert: true }
+    );
+  } catch (error) {
+    console.error('Error writing user data to MongoDB:', error);
+  }
+}
+
 
 // ==========================================
 // 1. ดึงค่า Environment Variables จาก .env
@@ -43,6 +62,7 @@ const LINE_CHANNEL_SECRET = (process.env.LINE_CHANNEL_SECRET || '').trim();
 const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
 const TARGET_USER_OR_GROUP_ID = (process.env.TARGET_USER_OR_GROUP_ID || '').trim();
 
+
 // ตั้งค่า LINE Bot
 const lineConfig = {
   channelAccessToken: LINE_CHANNEL_ACCESS_TOKEN,
@@ -50,12 +70,14 @@ const lineConfig = {
 };
 const client = new line.messagingApi.MessagingApiClient(lineConfig);
 
+
 // ==========================================
 // 2. Webhook & Endpoint สำหรับ LINE
 // ==========================================
 app.get('/', (req, res) => {
-  res.send('Loyverse Bot & Daily Report Service is running!');
+  res.send('Loyverse Bot & Daily Report Service is running with MongoDB!');
 });
+
 
 app.post('/webhook', line.middleware(lineConfig), (req, res) => {
   Promise
@@ -67,6 +89,7 @@ app.post('/webhook', line.middleware(lineConfig), (req, res) => {
     });
 });
 
+
 // ==========================================
 // 3. ฟังก์ชันดึงข้อมูลยอดขายและกำไร
 // ==========================================
@@ -76,13 +99,16 @@ async function getDailySales() {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
+
     const response = await axios.get('https://api.loyverse.com/v1.0/receipts', {
       headers: { 'Authorization': `Bearer ${LOYVERSE_TOKEN}` },
       params: { created_at_min: startOfDay, created_at_max: endOfDay, limit: 250 }
     });
 
+
     const receipts = response.data.receipts || [];
     let totalSales = 0, totalCost = 0;
+
 
     receipts.forEach(receipt => {
       totalSales += receipt.total_money || 0;
@@ -92,6 +118,7 @@ async function getDailySales() {
         });
       }
     });
+
 
     return {
       totalSales: totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -104,19 +131,23 @@ async function getDailySales() {
   }
 }
 
+
 // ==========================================
 // 4. ฟังก์ชันการทำงานของ LINE Bot (จัดการข้อความ)
 // ==========================================
 
+
 // ค้นหาข้อมูลลูกค้าใน Loyverse ด้วยเบอร์โทรศัพท์ (วนลูปตาม Cursor)
 async function findCustomerByPhone(phoneNumber) {
   let cursor = null;
+
 
   do {
     let url = `https://api.loyverse.com/v1.0/customers?limit=250`;
     if (cursor) {
       url += `&cursor=${cursor}`;
     }
+
 
     try {
       const response = await axios.get(url, {
@@ -126,15 +157,18 @@ async function findCustomerByPhone(phoneNumber) {
         }
       });
 
+
       const customers = response.data.customers || [];
       const matchedCustomer = customers.find(c => {
         const phoneInSystem = c.phone_number ? c.phone_number.replace(/\s+/g, '') : '';
         return phoneInSystem === phoneNumber;
       });
 
+
       if (matchedCustomer) {
         return matchedCustomer;
       }
+
 
       cursor = response.data.cursor;
     } catch (error) {
@@ -142,10 +176,13 @@ async function findCustomerByPhone(phoneNumber) {
       break;
     }
 
+
   } while (cursor);
+
 
   return null;
 }
+
 
 // สร้าง Flex Message แสดงของรางวัล
 function getRewardFlexMessage() {
@@ -220,14 +257,17 @@ function getRewardFlexMessage() {
   };
 }
 
+
 // จัดการข้อความที่ส่งมาจาก LINE
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
   }
 
+
   const userMessage = event.message.text.trim();
   const senderId = event.source.userId; // ดึง User ID ของคนที่พิมพ์เข้ามา
+
 
   // 0. คำสั่งเรียกดูยอดขายและกำไร (ล็อกเฉพาะ User ID ของคุณเท่านั้น!)
   if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
@@ -236,6 +276,7 @@ async function handleEvent(event) {
       return Promise.resolve(null);
     }
 
+
     const salesData = await getDailySales();
     const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
    
@@ -243,11 +284,13 @@ async function handleEvent(event) {
       ? `📈 สรุปยอดขาย & กำไร (ณ ปัจจุบัน)\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล`
       : '❌ ไม่สามารถดึงข้อมูลยอดขายจากระบบได้ในขณะนี้';
 
+
     return client.replyMessage({
       replyToken: event.replyToken,
       messages: [{ type: 'text', text: replyText }]
     });
   }
+
 
   // 1. คำสั่งแสดงของรางวัล
   if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
@@ -257,6 +300,7 @@ async function handleEvent(event) {
     });
   }
 
+
   // 2. คำสั่งเมื่อลูกค้ากดปุ่มแลกรางวัล
   if (userMessage.startsWith("#แลกรางวัล")) {
     const rawContent = userMessage.replace("#แลกรางวัล", "").trim();
@@ -265,12 +309,14 @@ async function handleEvent(event) {
     let requiredPoints = 0;
     let rewardName = "";
 
+
     if (firstSpaceIndex !== -1) {
       requiredPoints = parseFloat(rawContent.substring(0, firstSpaceIndex)) || 0;
       rewardName = rawContent.substring(firstSpaceIndex + 1).trim();
     } else {
       rewardName = rawContent;
     }
+
 
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -281,19 +327,21 @@ async function handleEvent(event) {
     });
   }
 
-  // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์ (บันทึกลงไฟล์ JSON ถาวร)
+
+  // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์ (บันทึกลง MongoDB ถาวร)
   const matchWithPhone = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
+
 
   if (matchWithPhone) {
     const phoneNumber = matchWithPhone[1];
-    
-    // โหลดข้อมูลเดิมมาอัปเดต และบันทึกลงไฟล์ JSON
-    const users = loadUserData();
-    users[senderId] = phoneNumber;
-    saveUserData(users);
+   
+    // บันทึกลง MongoDB
+    await saveUserData(senderId, phoneNumber);
+
 
     try {
       const matchedCustomer = await findCustomerByPhone(phoneNumber);
+
 
       if (matchedCustomer) {
         const points = matchedCustomer.total_points || 0;
@@ -314,6 +362,7 @@ async function handleEvent(event) {
         });
       }
 
+
     } catch (error) {
       console.error('Error in handleEvent:', error);
       return client.replyMessage({
@@ -326,13 +375,15 @@ async function handleEvent(event) {
     }
   }
 
-  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "#เช็คแต้ม" / "แต้ม" (ดึงเบอร์จากไฟล์ JSON มาเช็คให้เลย)
+
+  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "#เช็คแต้ม" / "แต้ม" (ดึงเบอร์จาก MongoDB มาเช็คให้เลย)
   const isOnlyCheckPoints = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม' || userMessage === 'แต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
 
+
   if (isOnlyCheckPoints || isOnlyPhoneNumber) {
-    const users = loadUserData();
-    const savedPhone = users[senderId];
+    const savedPhone = await getUserData(senderId);
+
 
     // ถ้ายังไม่เคยบันทึกเบอร์ไว้
     if (!savedPhone) {
@@ -345,9 +396,11 @@ async function handleEvent(event) {
       });
     }
 
+
     // ถ้ามีเบอร์ที่จำไว้แล้ว ดึงแต้มให้ทันที
     try {
       const matchedCustomer = await findCustomerByPhone(savedPhone);
+
 
       if (matchedCustomer) {
         const points = matchedCustomer.total_points || 0;
@@ -368,7 +421,7 @@ async function handleEvent(event) {
         });
       }
     } catch (error) {
-      console.error('Error in JSON check:', error);
+      console.error('Error in MongoDB check:', error);
       return client.replyMessage({
         replyToken: event.replyToken,
         messages: [{
@@ -379,8 +432,10 @@ async function handleEvent(event) {
     }
   }
 
+
   return Promise.resolve(null);
 }
+
 
 // ==========================================
 // 5. ระบบส่งรายงานประจำวันอัตโนมัติ ( Cron Job เวลา 22:00 น. )
@@ -393,11 +448,14 @@ cron.schedule('0 22 * * *', async () => {
     return;
   }
 
+
   const salesData = await getDailySales();
   if (!salesData) return;
 
+
   const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
   const messageText = `📈 สรุปยอดขาย & กำไรประจำวัน 📈\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล\n\nขอบคุณสำหรับความตั้งใจทำงานในวันนี้ครับ! ✨`;
+
 
   try {
     await client.pushMessage({
@@ -409,6 +467,7 @@ cron.schedule('0 22 * * *', async () => {
     console.error('❌ ส่งรายงานไม่สำเร็จ:', err.message);
   }
 }, { timezone: "Asia/Bangkok" });
+
 
 // ==========================================
 // 6. เริ่มต้นเปิด Server
