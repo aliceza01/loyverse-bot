@@ -1,4 +1,4 @@
-require('dotenv').config();
+Require('dotenv').config();
 const express = require('express');
 const line = require('@line/bot-sdk');
 const axios = require('axios');
@@ -60,7 +60,7 @@ const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
 
 // กำหนดรายชื่อแอดมิน
 const ADMIN_IDS = [
-  "U31cdc39e686d827f23897b5da1431536",
+  "U3113GmLkaZvKbncgXkNj9hL8cQJCSCjXscK",
   "Ub77ae405833d4efcca7bd15017109f14"
 ];
 
@@ -296,7 +296,11 @@ function getRewardFlexMessage() {
             contents: [
               {
                 type: "button",
-                action: { type: "message", label: "ดูสินค้าอาหารหมา", text: "อาหารหมา" },
+                action: {
+                  type: "uri",
+                  label: "ดูสินค้าอาหารหมา",
+                  uri: "https://liff.line.me/YOUR_LIFF_ID_DOG"
+                },
                 style: "primary",
                 color: "#ff7f50"
               }
@@ -326,7 +330,11 @@ function getRewardFlexMessage() {
             contents: [
               {
                 type: "button",
-                action: { type: "message", label: "ดูอาหารแมว", text: "อาหารแมว" },
+                action: {
+                  type: "uri",
+                  label: "ดูอาหารแมว",
+                  uri: "https://liff.line.me/YOUR_LIFF_ID_CAT"
+                },
                 style: "primary",
                 color: "#1DB446"
               }
@@ -356,7 +364,11 @@ function getRewardFlexMessage() {
             contents: [
               {
                 type: "button",
-                action: { type: "message", label: "ดูอุปกรณ์และปลา", text: "ปลาบอลลูน" },
+                action: {
+                  type: "uri",
+                  label: "ดูอุปกรณ์และปลา",
+                  uri: "https://liff.line.me/YOUR_LIFF_ID_FISH"
+                },
                 style: "primary",
                 color: "#0066cc"
               }
