@@ -313,6 +313,14 @@ async function handleEvent(event) {
   const userMessage = event.message.text.trim();
   const senderId = event.source.userId;
 
+  // 0.0 คำสั่งเช็ค User ID ของตัวเอง (เพื่อให้คุณเอาไปใส่เป็นแอดมินใน Render)
+  if (userMessage === "me" || userMessage === "id") {
+    return client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [{ type: 'text', text: `🆔 User ID ของคุณคือ:\n${senderId}` }]
+    });
+  }
+
   // 0.1 คำสั่งสำหรับแอดมิน: บังคับอัปเดต Rich Menu ใหม่ให้ลูกค้าทุกคนทันที (ผ่านแชท)
   if (userMessage.startsWith("#เปลี่ยนริชเมนู")) {
     if (!ADMIN_IDS.includes(senderId)) {
