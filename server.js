@@ -59,10 +59,12 @@ async function saveUserData(lineUserId, phone) {
 const LINE_CHANNEL_ACCESS_TOKEN = (process.env.LINE_CHANNEL_ACCESS_TOKEN || '').trim();
 const LINE_CHANNEL_SECRET = (process.env.LINE_CHANNEL_SECRET || '').trim();
 const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
-const TARGET_USER_OR_GROUP_ID = (process.env.TARGET_USER_OR_GROUP_ID || '').trim();
 
-// แปลงค่ารายชื่อแอดมินให้รองรับหลายคน (คั่นด้วยเครื่องหมาย ,)
-const ADMIN_IDS = TARGET_USER_OR_GROUP_ID.split(',').map(id => id.trim()).filter(id => id);
+// กำหนดรายชื่อแอดมินตรงนี้แบบถาวร ป้องกันปัญหาการอ่านค่า .env เพี้ยน
+const ADMIN_IDS = [
+  "U319eWJh8J6Mx9DrGXKEv3ojKmqw8Cv9pscK",
+  "Ub77ae405833d4efcca7bd15017109f14"
+];
 
 // ตั้งค่า LINE Bot
 const lineConfig = {
@@ -314,7 +316,7 @@ async function handleEvent(event) {
   const senderId = event.source.userId;
 
   // 0.0 คำสั่งเช็ค User ID ของตัวเอง (เพื่อให้คุณเอาไปใส่เป็นแอดมินใน Render)
-  if (userMessage === "me" || userMessage === "id") {
+  if (userMessage === "ไอดีฉัน" || userMessage === "id") {
     return client.replyMessage({
       replyToken: event.replyToken,
       messages: [{ type: 'text', text: `🆔 User ID ของคุณคือ:\n${senderId}` }]
@@ -498,7 +500,7 @@ cron.schedule('0 22 * * *', async () => {
   console.log('⏰ ถึงเวลา 22:00 น. เริ่มส่งรายงานประจำวัน...');
   
   if (ADMIN_IDS.length === 0) {
-    console.log('❌ ไม่พบ TARGET_USER_OR_GROUP_ID ใน .env');
+    console.log('❌ ไม่พบรายชื่อแอดมินในระบบ');
     return;
   }
 
