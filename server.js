@@ -371,7 +371,7 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
     type: "box",
     layout: "vertical",
     contents: [
-      { type: "text", text: `คุณ ${customerName || 'ลูกค้าคนสำคัญ'}`, weight: "bold", size: "md", color: "#333333", align: "center" },
+      { type: "text", text: `${customerName || 'ลูกค้าคนสำคัญ'}`, weight: "bold", size: "md", color: "#333333", align: "center" },
       { type: "text", text: `เบอร์โทรศัพท์: ${phone}`, size: "xs", color: "#888888", align: "center", margin: "xs" }
     ],
     margin: "md"
