@@ -18,8 +18,8 @@ let usersCollection;
 async function connectDB() {
   try {
     await clientDb.connect();
-    const db = clientDb.db('loyverse_bot'); // ชื่อฐานข้อมูล
-    usersCollection = db.collection('users'); // ชื่อ Collection
+    const db = clientDb.db('loyverse_bot');
+    usersCollection = db.collection('users');
     console.log('✅ Connected to MongoDB successfully!');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
@@ -27,7 +27,6 @@ async function connectDB() {
 }
 connectDB();
 
-// ฟังก์ชันอ่านข้อมูลผู้ใช้จาก MongoDB
 async function getUserData(lineUserId) {
   try {
     if (!usersCollection) return null;
@@ -39,7 +38,6 @@ async function getUserData(lineUserId) {
   }
 }
 
-// ฟังก์ชันบันทึกข้อมูลผู้ใช้ลง MongoDB
 async function saveUserData(lineUserId, phone) {
   try {
     if (!usersCollection) return;
@@ -60,20 +58,18 @@ const LINE_CHANNEL_ACCESS_TOKEN = (process.env.LINE_CHANNEL_ACCESS_TOKEN || '').
 const LINE_CHANNEL_SECRET = (process.env.LINE_CHANNEL_SECRET || '').trim();
 const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
 
-// กำหนดรายชื่อแอดมินตรงนี้แบบถาวร ป้องกันปัญหาการอ่านค่า .env เพี้ยน
+// กำหนดรายชื่อแอดมิน (รวม User ID จากภาพของคุณเรียบร้อยแล้ว)
 const ADMIN_IDS = [
   "U319eWJh8J6Mx9DrGXKEv3ojKmqw8Cv9pscK",
   "Ub77ae405833d4efcca7bd15017109f14"
 ];
 
-// ตั้งค่า LINE Bot
 const lineConfig = {
   channelAccessToken: LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: LINE_CHANNEL_SECRET
 };
 const client = new line.messagingApi.MessagingApiClient(lineConfig);
 
-// ฟังก์ชันสำหรับบังคับเปลี่ยน Default Rich Menu ให้กับผู้ใช้ทุกคนผ่าน API
 async function setDefaultRichMenuGlobal(richMenuId) {
   try {
     await client.setDefaultRichMenu(richMenuId);
@@ -140,9 +136,8 @@ async function getDailySales() {
 }
 
 // ==========================================
-// 4. ฟังก์ชันการทำงานของ LINE Bot (ดีไซน์ Flex Message ใหม่ทั้งหมด)
+// 4. ฟังก์ชันการทำงานของ LINE Bot
 // ==========================================
-
 async function findCustomerByPhone(phoneNumber) {
   let cursor = null;
 
@@ -180,8 +175,6 @@ async function findCustomerByPhone(phoneNumber) {
 
   return null;
 }
-
-// --- ฟังก์ชันออกแบบ Flex Message ให้ดูสวยงาม พรีเมียม ---
 
 function getUserIdFlexMessage(userId) {
   return {
@@ -345,11 +338,9 @@ function getRewardFlexMessage() {
   };
 }
 
-// 🌟 ปรับดีไซน์การ์ดแต้มใหม่ให้สวยหรู มินิมอล และรวมข้อความบันทึกเบอร์ไว้ด้านบนสุดในใบเดียว
 function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
   const contentsList = [];
 
-  // หากเป็นการบันทึกเบอร์ใหม่ ให้ใส่กล่องแจ้งเตือนสถานะไว้ด้านบนสุดของการ์ดเลย
   if (isNewSaved) {
     contentsList.push({
       type: "box",
@@ -360,18 +351,16 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
       ],
       backgroundColor: "#f0fdf4",
       paddingAll: "sm",
-      cornerRadius: "md",
-      margin: "none"
+      cornerRadius: "md"
     });
     contentsList.push({ type: "separator", margin: "md" });
   }
 
-  // ข้อมูลชื่อและเบอร์โทร
   contentsList.push({
     type: "box",
     layout: "vertical",
     contents: [
-      { type: "text", text: `${customerName || 'ลูกค้าคนสำคัญ'}`, weight: "bold", size: "md", color: "#333333", align: "center" },
+      { type: "text", text: `คุณ ${customerName || 'ลูกค้าคนสำคัญ'}`, weight: "bold", size: "md", color: "#333333", align: "center" },
       { type: "text", text: `เบอร์โทรศัพท์: ${phone}`, size: "xs", color: "#888888", align: "center", margin: "xs" }
     ],
     margin: "md"
@@ -379,7 +368,6 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
 
   contentsList.push({ type: "separator", margin: "lg" });
 
-  // กล่องแสดงแต้มสะสมตัวใหญ่ชัดเจน
   contentsList.push({
     type: "box",
     layout: "vertical",
@@ -460,22 +448,24 @@ function getWelcomeHelpFlexMessage() {
   };
 }
 
-// จัดการข้อความที่ส่งมาจาก LINE
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
   }
 
   const userMessage = event.message.text.trim();
+  const lowerMsg = userMessage.toLowerCase();
   const senderId = event.source.userId;
 
-  if (userMessage === "ไอดีฉัน" || userMessage === "id") {
+  // ตรวจสอบไอดี (รองรับทั้งพิมพ์เล็กพิมพ์ใหญ่ เช่น id, ID, ไอดีฉัน)
+  if (lowerMsg === "ไอดีฉัน" || lowerMsg === "id") {
     return client.replyMessage({
       replyToken: event.replyToken,
       messages: [getUserIdFlexMessage(senderId)]
     });
   }
 
+  // คำสั่งแอดมิน: เปลี่ยนริชเมนู
   if (userMessage.startsWith("#เปลี่ยนริชเมนู")) {
     if (!ADMIN_IDS.includes(senderId)) {
       return Promise.resolve(null);
@@ -501,9 +491,13 @@ async function handleEvent(event) {
     });
   }
 
+  // คำสั่งแอดมิน: ดูยอดขายและกำไร (ตรวจสอบสิทธิ์จาก ADMIN_IDS)
   if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
     if (!ADMIN_IDS.includes(senderId)) {
-      return Promise.resolve(null);
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [getAdminNoticeFlexMessage("⛔ ไม่มีสิทธิ์เข้าถึง", "คำสั่งนี้สำหรับผู้ดูแลระบบเท่านั้นครับ")]
+      });
     }
 
     const salesData = await getDailySales();
@@ -522,6 +516,7 @@ async function handleEvent(event) {
     });
   }
 
+  // ของรางวัล
   if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น") {
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -565,7 +560,7 @@ async function handleEvent(event) {
     });
   }
 
-  // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์ (รวมร่างใส่การ์ดเดียว)
+  // เช็คแต้มพร้อมเบอร์
   const matchWithPhone = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
 
   if (matchWithPhone) {
@@ -580,7 +575,7 @@ async function handleEvent(event) {
         const customerName = matchedCustomer.name || 'ลูกค้า';
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [getPointFlexMessage(customerName, points, phoneNumber, true)] // เปิดใช้โหมดแจ้งเตือนบันทึกเบอร์สำเร็จในการ์ดเดียวกัน
+          messages: [getPointFlexMessage(customerName, points, phoneNumber, true)]
         });
       } else {
         return client.replyMessage({
@@ -597,7 +592,7 @@ async function handleEvent(event) {
     }
   }
 
-  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "แต้ม" (ดึงเบอร์จาก MongoDB มาโชว์แบบการ์ดพรีเมียม)
+  // เช็คแต้มแบบปกติ
   const isOnlyCheckPoints = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม' || userMessage === 'แต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
 
@@ -640,15 +635,12 @@ async function handleEvent(event) {
 }
 
 // ==========================================
-// 5. ระบบส่งรายงานประจำวันอัตโนมัติ ( Cron Job เวลา 22:00 น. )
+// 5. ระบบส่งรายงานประจำวันอัตโนมัติ ( 22:00 น. )
 // ==========================================
 cron.schedule('0 22 * * *', async () => {
   console.log('⏰ ถึงเวลา 22:00 น. เริ่มส่งรายงานประจำวัน...');
   
-  if (ADMIN_IDS.length === 0) {
-    console.log('❌ ไม่พบรายชื่อแอดมินในระบบ');
-    return;
-  }
+  if (ADMIN_IDS.length === 0) return;
 
   const salesData = await getDailySales();
   if (!salesData) return;
