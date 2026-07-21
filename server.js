@@ -3,8 +3,37 @@ const express = require('express');
 const line = require('@line/bot-sdk');
 const axios = require('axios');
 const cron = require('node-cron');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
+
+// ==========================================
+// 0. ระบบจัดการฐานข้อมูลไฟล์ JSON (บันทึกเบอร์ถาวร)
+// ==========================================
+const DB_FILE = path.join(__dirname, 'users.json');
+
+// ฟังก์ชันอ่านข้อมูลผู้ใช้จากไฟล์
+function loadUserData() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const data = fs.readFileSync(DB_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error reading user data file:', error);
+  }
+  return {};
+}
+
+// ฟังก์ชันบันทึกข้อมูลผู้ใช้ลงไฟล์
+function saveUserData(data) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (error) {
+    console.error('Error writing user data file:', error);
+  }
+}
 
 // ==========================================
 // 1. ดึงค่า Environment Variables จาก .env
@@ -202,16 +231,15 @@ async function handleEvent(event) {
 
   // 0. คำสั่งเรียกดูยอดขายและกำไร (ล็อกเฉพาะ User ID ของคุณเท่านั้น!)
   if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
-    // ถ้าไม่ใช่ ID ของคุณ จะไม่ตอบอะไรเลย (หรือจะให้ส่งข้อความปฏิเสธก็ได้ครับ)
     if (senderId !== TARGET_USER_OR_GROUP_ID) {
       console.log(`⚠️ มีคนอื่นพยายามดูยอดขาย (UserId: ${senderId}) ระบบไม่อนุญาต`);
-      return Promise.resolve(null); 
+      return Promise.resolve(null);
     }
 
     const salesData = await getDailySales();
     const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-    
-    const replyText = salesData 
+   
+    const replyText = salesData
       ? `📈 สรุปยอดขาย & กำไร (ณ ปัจจุบัน)\n📅 วันที่: ${todayStr}\n\n💵 ยอดขายรวม: ${salesData.totalSales} บาท\n💰 กำไรสุทธิ: ${salesData.netProfit} บาท\n🧾 จำนวนบิลทั้งหมด: ${salesData.totalReceipts} บิล`
       : '❌ ไม่สามารถดึงข้อมูลยอดขายจากระบบได้ในขณะนี้';
 
@@ -221,7 +249,7 @@ async function handleEvent(event) {
     });
   }
 
-  // 1. คำสั่งแสดงของรางวัล (ให้ลูกค้าคนอื่นใช้งานได้ปกติ)
+  // 1. คำสั่งแสดงของรางวัล
   if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล") {
     return client.replyMessage({
       replyToken: event.replyToken,
@@ -253,11 +281,16 @@ async function handleEvent(event) {
     });
   }
 
-  // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์
-  const match = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
+  // 3. ตรวจสอบการพิมพ์คำว่า "เช็คแต้ม" + เบอร์โทรศัพท์ (บันทึกลงไฟล์ JSON ถาวร)
+  const matchWithPhone = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
 
-  if (match) {
-    const phoneNumber = match[1];
+  if (matchWithPhone) {
+    const phoneNumber = matchWithPhone[1];
+    
+    // โหลดข้อมูลเดิมมาอัปเดต และบันทึกลงไฟล์ JSON
+    const users = loadUserData();
+    users[senderId] = phoneNumber;
+    saveUserData(users);
 
     try {
       const matchedCustomer = await findCustomerByPhone(phoneNumber);
@@ -268,7 +301,7 @@ async function handleEvent(event) {
           replyToken: event.replyToken,
           messages: [{
             type: 'text',
-            text: `สวัสดีครับ ${matchedCustomer.name || 'ลูกค้า'}\nตอนนี้มีแต้มสะสมทั้งหมด: ${points} แต้มครับ ✨`
+            text: `📌 (บันทึกเบอร์เรียบร้อยครับ)\nสวัสดีครับ ${matchedCustomer.name || 'ลูกค้า'}\nตอนนี้มีแต้มสะสมทั้งหมด: ${points} แต้มครับ ✨`
           }]
         });
       } else {
@@ -293,18 +326,57 @@ async function handleEvent(event) {
     }
   }
 
-  // 4. กรณีพิมพ์เฉพาะคำว่า "#เช็คแต้ม" หรือ เบอร์โทร 9-10 หลักโดดๆ
-  const isCheckPointsKeyword = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม';
+  // 4. กรณีพิมพ์เฉพาะคำว่า "เช็คแต้ม" / "#เช็คแต้ม" / "แต้ม" (ดึงเบอร์จากไฟล์ JSON มาเช็คให้เลย)
+  const isOnlyCheckPoints = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม' || userMessage === 'แต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
 
-  if (isCheckPointsKeyword || isOnlyPhoneNumber) {
-    return client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [{
-        type: 'text',
-        text: 'สวัสดีครับ 🐾 หากต้องการเช็คแต้มสะสม กรุณาพิมพ์คำว่า "เช็คแต้ม" ตามด้วยเบอร์โทรศัพท์ของคุณ เช่น เช็คแต้ม0812345678'
-      }]
-    });
+  if (isOnlyCheckPoints || isOnlyPhoneNumber) {
+    const users = loadUserData();
+    const savedPhone = users[senderId];
+
+    // ถ้ายังไม่เคยบันทึกเบอร์ไว้
+    if (!savedPhone) {
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{
+          type: 'text',
+          text: 'สวัสดีครับ 🐾 หากต้องการเช็คแต้ม ครั้งแรกกรุณาพิมพ์ "เช็คแต้ม" ตามด้วยเบอร์โทรศัพท์ของคุณ (เช่น เช็คแต้ม0812345678) เพื่อให้ระบบจำเบอร์ไว้ครับ'
+        }]
+      });
+    }
+
+    // ถ้ามีเบอร์ที่จำไว้แล้ว ดึงแต้มให้ทันที
+    try {
+      const matchedCustomer = await findCustomerByPhone(savedPhone);
+
+      if (matchedCustomer) {
+        const points = matchedCustomer.total_points || 0;
+        return client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [{
+            type: 'text',
+            text: `🔍 ดึงข้อมูลจากเบอร์ที่บันทึกไว้ (${savedPhone}):\nสวัสดีครับ ${matchedCustomer.name || 'ลูกค้า'}\nตอนนี้มีแต้มสะสมทั้งหมด: ${points} แต้มครับ ✨\n\n*(หากต้องการเปลี่ยนเบอร์ ให้พิมพ์ เช็คแต้ม ตามด้วยเบอร์ใหม่ได้เลยครับ)*`
+          }]
+        });
+      } else {
+        return client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [{
+            type: 'text',
+            text: `❌ ไม่พบข้อมูลสมาชิกของเบอร์ที่บันทึกไว้ (${savedPhone})\nกรุณาพิมพ์ "เช็คแต้ม" ตามด้วยเบอร์ใหม่อีกครั้งเพื่ออัปเดตครับ`
+          }]
+        });
+      }
+    } catch (error) {
+      console.error('Error in JSON check:', error);
+      return client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [{
+          type: 'text',
+          text: 'เกิดข้อผิดพลาดในการดึงข้อมูลแต้ม กรุณาลองใหม่อีกครั้งในภายหลังครับ'
+        }]
+      });
+    }
   }
 
   return Promise.resolve(null);
@@ -315,7 +387,7 @@ async function handleEvent(event) {
 // ==========================================
 cron.schedule('0 22 * * *', async () => {
   console.log('⏰ ถึงเวลา 22:00 น. เริ่มส่งรายงานประจำวัน...');
-  
+ 
   if (!TARGET_USER_OR_GROUP_ID) {
     console.log('❌ ไม่พบ TARGET_USER_OR_GROUP_ID ใน .env');
     return;
@@ -345,4 +417,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });
+
 
