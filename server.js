@@ -1,11 +1,13 @@
-require('dotenv').config();
+Require('dotenv').config();
 const express = require('express');
 const line = require('@line/bot-sdk');
 const axios = require('axios');
 const cron = require('node-cron');
 const { MongoClient } = require('mongodb');
 
+
 const app = express();
+
 
 // ==========================================
 // 0. ระบบจัดการฐานข้อมูล MongoDB (บันทึกเบอร์ถาวร)
@@ -13,7 +15,9 @@ const app = express();
 const mongoUri = process.env.MONGODB_URI;
 const clientDb = new MongoClient(mongoUri);
 
+
 let usersCollection;
+
 
 async function connectDB() {
   try {
@@ -27,6 +31,7 @@ async function connectDB() {
 }
 connectDB();
 
+
 async function getUserData(lineUserId) {
   try {
     if (!usersCollection) return null;
@@ -37,6 +42,7 @@ async function getUserData(lineUserId) {
     return null;
   }
 }
+
 
 async function saveUserData(lineUserId, phone) {
   try {
@@ -51,6 +57,7 @@ async function saveUserData(lineUserId, phone) {
   }
 }
 
+
 // ==========================================
 // 1. ดึงค่า Environment Variables จาก .env
 // ==========================================
@@ -58,17 +65,20 @@ const LINE_CHANNEL_ACCESS_TOKEN = (process.env.LINE_CHANNEL_ACCESS_TOKEN || '').
 const LINE_CHANNEL_SECRET = (process.env.LINE_CHANNEL_SECRET || '').trim();
 const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
 
+
 // กำหนดรายชื่อแอดมิน
 const ADMIN_IDS = [
   "U3113GmLkaZvKbncgXkNj9hL8cQJCSCjXscK",
   "Ub77ae405833d4efcca7bd15017109f14"
 ];
 
+
 const lineConfig = {
   channelAccessToken: LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: LINE_CHANNEL_SECRET
 };
 const client = new line.messagingApi.MessagingApiClient(lineConfig);
+
 
 async function setDefaultRichMenuGlobal(richMenuId) {
   try {
@@ -81,12 +91,14 @@ async function setDefaultRichMenuGlobal(richMenuId) {
   }
 }
 
+
 // ==========================================
 // 2. Webhook & Endpoint สำหรับ LINE
 // ==========================================
 app.get('/', (req, res) => {
   res.send('Loyverse Bot & Daily Report Service is running with MongoDB & Multi-Admin Rich Menu!');
 });
+
 
 app.post('/webhook', line.middleware(lineConfig), (req, res) => {
   Promise
@@ -98,6 +110,7 @@ app.post('/webhook', line.middleware(lineConfig), (req, res) => {
     });
 });
 
+
 // ==========================================
 // 3. ฟังก์ชันดึงข้อมูลยอดขายและกำไร
 // ==========================================
@@ -107,13 +120,16 @@ async function getDailySales() {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
+
     const response = await axios.get('https://api.loyverse.com/v1.0/receipts', {
       headers: { 'Authorization': `Bearer ${LOYVERSE_TOKEN}` },
       params: { created_at_min: startOfDay, created_at_max: endOfDay, limit: 250 }
     });
 
+
     const receipts = response.data.receipts || [];
     let totalSales = 0, totalCost = 0;
+
 
     receipts.forEach(receipt => {
       totalSales += receipt.total_money || 0;
@@ -123,6 +139,7 @@ async function getDailySales() {
         });
       }
     });
+
 
     return {
       totalSales: totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -135,17 +152,20 @@ async function getDailySales() {
   }
 }
 
+
 // ==========================================
 // 4. ฟังก์ชันการทำงานของ LINE Bot
 // ==========================================
 async function findCustomerByPhone(phoneNumber) {
   let cursor = null;
 
+
   do {
     let url = `https://api.loyverse.com/v1.0/customers?limit=250`;
     if (cursor) {
       url += `&cursor=${cursor}`;
     }
+
 
     try {
       const response = await axios.get(url, {
@@ -155,15 +175,18 @@ async function findCustomerByPhone(phoneNumber) {
         }
       });
 
+
       const customers = response.data.customers || [];
       const matchedCustomer = customers.find(c => {
         const phoneInSystem = c.phone_number ? c.phone_number.replace(/\s+/g, '') : '';
         return phoneInSystem === phoneNumber;
       });
 
+
       if (matchedCustomer) {
         return matchedCustomer;
       }
+
 
       cursor = response.data.cursor;
     } catch (error) {
@@ -171,10 +194,13 @@ async function findCustomerByPhone(phoneNumber) {
       break;
     }
 
+
   } while (cursor);
+
 
   return null;
 }
+
 
 function getUserIdFlexMessage(userId) {
   return {
@@ -194,6 +220,7 @@ function getUserIdFlexMessage(userId) {
   };
 }
 
+
 function getAdminNoticeFlexMessage(title, description) {
   return {
     type: "flex",
@@ -211,6 +238,7 @@ function getAdminNoticeFlexMessage(title, description) {
     }
   };
 }
+
 
 function getSalesFlexMessage(salesData, todayStr) {
   return {
@@ -265,6 +293,7 @@ function getSalesFlexMessage(salesData, todayStr) {
     }
   };
 }
+
 
 function getRewardFlexMessage() {
   return {
@@ -333,7 +362,7 @@ function getRewardFlexMessage() {
                 action: {
                   type: "uri",
                   label: "ดูอาหารแมว",
-                  uri: "https://liff.line.me/2010783485-TIIRDjGm" // อัปเดตลิงก์ LIFF อาหารแมวเรียบร้อย
+                  uri: "https://liff.line.me/2010783485-TIIRDjGm"
                 },
                 style: "primary",
                 color: "#1DB446"
@@ -380,8 +409,10 @@ function getRewardFlexMessage() {
   };
 }
 
+
 function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
   const contentsList = [];
+
 
   if (isNewSaved) {
     contentsList.push({
@@ -398,6 +429,7 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
     contentsList.push({ type: "separator", margin: "md" });
   }
 
+
   contentsList.push({
     type: "box",
     layout: "vertical",
@@ -408,7 +440,9 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
     margin: "md"
   });
 
+
   contentsList.push({ type: "separator", margin: "lg" });
+
 
   contentsList.push({
     type: "box",
@@ -422,6 +456,7 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
     paddingAll: "md",
     cornerRadius: "lg"
   });
+
 
   return {
     type: "flex",
@@ -449,7 +484,11 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
         contents: [
           {
             type: "button",
-            action: { type: "message", label: "🎁 กดดูโปรโมชั่น", text: "โปรโมชั่น" },
+            action: {
+              type: "uri",
+              label: "🎁 ดูโปรโมชั่นอาหารแมว",
+              uri: "https://liff.line.me/2010783485-TIIRDjGm"
+            },
             style: "primary",
             color: "#ff7f50"
           }
@@ -458,6 +497,7 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
     }
   };
 }
+
 
 function getWelcomeHelpFlexMessage() {
   return {
@@ -490,14 +530,17 @@ function getWelcomeHelpFlexMessage() {
   };
 }
 
+
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
   }
 
+
   const userMessage = event.message.text.trim();
   const lowerMsg = userMessage.toLowerCase();
   const senderId = event.source.userId;
+
 
   if (lowerMsg === "ไอดีฉัน" || lowerMsg === "id") {
     return client.replyMessage({
@@ -506,10 +549,12 @@ async function handleEvent(event) {
     });
   }
 
+
   if (userMessage.startsWith("#เปลี่ยนริชเมนู")) {
     if (!ADMIN_IDS.includes(senderId)) {
       return Promise.resolve(null);
     }
+
 
     const newRichMenuId = userMessage.replace("#เปลี่ยนริชเมนู", "").trim();
     if (!newRichMenuId) {
@@ -518,6 +563,7 @@ async function handleEvent(event) {
         messages: [getAdminNoticeFlexMessage("❌ รูปแบบไม่ถูกต้อง", "กรุณาใส่ Rich Menu ID ต่อท้ายด้วย เช่น #เปลี่ยนริชเมนู 9408661")]
       });
     }
+
 
     const success = await setDefaultRichMenuGlobal(newRichMenuId);
     return client.replyMessage({
@@ -531,6 +577,7 @@ async function handleEvent(event) {
     });
   }
 
+
   if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
     if (!ADMIN_IDS.includes(senderId)) {
       return client.replyMessage({
@@ -539,9 +586,10 @@ async function handleEvent(event) {
       });
     }
 
+
     const salesData = await getDailySales();
     const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-    
+   
     if (!salesData) {
       return client.replyMessage({
         replyToken: event.replyToken,
@@ -549,11 +597,13 @@ async function handleEvent(event) {
       });
     }
 
+
     return client.replyMessage({
       replyToken: event.replyToken,
       messages: [getSalesFlexMessage(salesData, todayStr)]
     });
   }
+
 
   if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น" || userMessage === "อาหารหมา" || userMessage === "อาหารแมว" || userMessage === "ปลาบอลลูน") {
     return client.replyMessage({
@@ -562,50 +612,18 @@ async function handleEvent(event) {
     });
   }
 
-  if (userMessage.startsWith("#แลกรางวัล")) {
-    const rawContent = userMessage.replace("#แลกรางวัล", "").trim();
-    const firstSpaceIndex = rawContent.indexOf(" ");
-    
-    let requiredPoints = 0;
-    let rewardName = "";
-
-    if (firstSpaceIndex !== -1) {
-      requiredPoints = parseFloat(rawContent.substring(0, firstSpaceIndex)) || 0;
-      rewardName = rawContent.substring(firstSpaceIndex + 1).trim();
-    } else {
-      rewardName = rawContent;
-    }
-
-    return client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [{
-        type: "flex",
-        altText: `🎁 แลกรางวัล: ${rewardName}`,
-        contents: {
-          type: "bubble",
-          body: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              { type: "text", text: "🎁 ทำรายการแลกรางวัล", weight: "bold", size: "md", color: "#1DB446" },
-              { type: "text", text: `คุณเลือกแลก "${rewardName}" (ใช้ ${requiredPoints} แต้ม)`, size: "sm", color: "#333333", wrap: true, margin: "md" },
-              { type: "separator", margin: "lg" },
-              { type: "text", text: "กรุณาแจ้งเบอร์โทรศัพท์กับพนักงานหน้าร้านเพื่อตรวจสอบแต้มและรับของรางวัลได้เลยครับ! ✨", size: "xs", color: "#888888", wrap: true, margin: "lg" }
-            ]
-          }
-        }
-      }]
-    });
-  }
 
   const matchWithPhone = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
+
 
   if (matchWithPhone) {
     const phoneNumber = matchWithPhone[1];
     await saveUserData(senderId, phoneNumber);
 
+
     try {
       const matchedCustomer = await findCustomerByPhone(phoneNumber);
+
 
       if (matchedCustomer) {
         const points = matchedCustomer.total_points || 0;
@@ -629,11 +647,14 @@ async function handleEvent(event) {
     }
   }
 
+
   const isOnlyCheckPoints = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม' || userMessage === 'แต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
 
+
   if (isOnlyCheckPoints || isOnlyPhoneNumber) {
     const savedPhone = await getUserData(senderId);
+
 
     if (!savedPhone) {
       return client.replyMessage({
@@ -642,8 +663,10 @@ async function handleEvent(event) {
       });
     }
 
+
     try {
       const matchedCustomer = await findCustomerByPhone(savedPhone);
+
 
       if (matchedCustomer) {
         const points = matchedCustomer.total_points || 0;
@@ -667,21 +690,26 @@ async function handleEvent(event) {
     }
   }
 
+
   return Promise.resolve(null);
 }
+
 
 // ==========================================
 // 5. ระบบส่งรายงานประจำวันอัตโนมัติ ( 22:00 น. )
 // ==========================================
 cron.schedule('0 22 * * *', async () => {
   console.log('⏰ ถึงเวลา 22:00 น. เริ่มส่งรายงานประจำวัน...');
-  
+ 
   if (ADMIN_IDS.length === 0) return;
+
 
   const salesData = await getDailySales();
   if (!salesData) return;
 
+
   const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
 
   try {
     await client.pushMessage({
@@ -693,6 +721,7 @@ cron.schedule('0 22 * * *', async () => {
     console.error('❌ ส่งรายงานไม่สำเร็จ:', err.message);
   }
 }, { timezone: "Asia/Bangkok" });
+
 
 // ==========================================
 // 6. เริ่มต้นเปิด Server
