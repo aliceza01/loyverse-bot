@@ -358,83 +358,41 @@ function getRewardFlexMessage() {
     type: "flex",
     altText: "🎁 รายการของรางวัลพิเศษจากแคสเปอร์เพ็ทช็อป",
     contents: {
-      type: "carousel",
-      contents: [
-        {
-          type: "bubble",
-          hero: {
-            type: "image",
-            url: "https://i.postimg.cc/j5d5r299/procat1.png",
-            size: "full",
-            aspectRatio: "20:13",
-            aspectMode: "cover"
-          },
-          body: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              { type: "text", text: "ของรางวัลสุดพิเศษ 1", weight: "bold", size: "lg", color: "#333333" },
-              { type: "text", text: "ใช้ 100 แต้มสะสมแลกรับทันที", size: "sm", color: "#666666", margin: "sm" }
-            ],
-            spacing: "sm",
-            paddingAll: "lg"
-          },
-          footer: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              {
-                type: "button",
-                action: {
-                  type: "uri",
-                  label: "🎁 กดแลกรางวัล (100 แต้ม)",
-                  uri: "https://liff.line.me/2010783485-TIIRDjGm"
-                },
-                style: "primary",
-                color: "#ff7f50"
-              }
-            ],
-            paddingAll: "lg"
+      type: "bubble",
+      hero: {
+        type: "image",
+        url: "https://i.postimg.cc/j5d5r299/procat1.png",
+        size: "full",
+        aspectRatio: "20:13",
+        aspectMode: "cover"
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          { type: "text", text: "ของรางวัลสุดพิเศษ", weight: "bold", size: "lg", color: "#333333" },
+          { type: "text", text: "ใช้แต้มสะสมแลกรับของรางวัลมากมาย", size: "sm", color: "#666666", margin: "sm" }
+        ],
+        spacing: "sm",
+        paddingAll: "lg"
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            action: {
+              type: "uri",
+              label: "🎁 คลิกดูของรางวัล",
+              uri: "https://liff.line.me/2010783485-TIIRDjGm"
+            },
+            style: "primary",
+            color: "#ff7f50"
           }
-        },
-        {
-          type: "bubble",
-          hero: {
-            type: "image",
-            url: "https://i.postimg.cc/d1qFTf9P/procat2.png",
-            size: "full",
-            aspectRatio: "20:13",
-            aspectMode: "cover"
-          },
-          body: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              { type: "text", text: "ของรางวัลสุดพิเศษ 2", weight: "bold", size: "lg", color: "#333333" },
-              { type: "text", text: "ใช้ 250 แต้มสะสมแลกรับทันที", size: "sm", color: "#666666", margin: "sm" }
-            ],
-            spacing: "sm",
-            paddingAll: "lg"
-          },
-          footer: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              {
-                type: "button",
-                action: {
-                  type: "uri",
-                  label: "🎁 กดแลกรางวัล (250 แต้ม)",
-                  uri: "https://liff.line.me/2010783485-TIIRDjGm"
-                },
-                style: "primary",
-                color: "#ff7f50"
-              }
-            ],
-            paddingAll: "lg"
-          }
-        }
-      ]
+        ],
+        paddingAll: "lg"
+      }
     }
   };
 }
