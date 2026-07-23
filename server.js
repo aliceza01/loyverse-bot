@@ -754,14 +754,17 @@ cron.schedule('0 22 * * *', async () => {
 
 
   try {
-    await client.pushMessage({
-      to: ADMIN_IDS[0],
-      messages: [getSalesFlexMessage(salesData, todayStr)]
-    });
-    console.log('✅ ส่งรายงานยอดขายประจำวันเรียบร้อย!');
-  } catch (err) {
+    // วนลูปส่งรายงานไปหาแอดมินทุกคนที่มีใน ADMIN_IDS
+    for (const adminId of ADMIN_IDS) {
+        await client.pushMessage({
+            to: adminId,
+            messages: [getSalesFlexMessage(salesData, todayStr)]
+        });
+    }
+    console.log('✅ ส่งรายงานยอดขายประจำวันเรียบร้อยแล้ว!');
+    } catch (err) {
     console.error('❌ ส่งรายงานไม่สำเร็จ:', err.message);
-  }
+}
 }, { timezone: "Asia/Bangkok" });
 
 
