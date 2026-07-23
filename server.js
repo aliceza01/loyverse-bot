@@ -361,7 +361,7 @@ function getRewardFlexMessage() {
       type: "bubble",
       hero: {
         type: "image",
-        url: "https://i.postimg.cc/j5d5r299/procat1.png",
+        url: "https://i.postimg.cc/J7NZ2FfR/IMG-5683.png",
         size: "full",
         aspectRatio: "20:13",
         aspectMode: "cover"
