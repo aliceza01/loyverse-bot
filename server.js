@@ -84,7 +84,7 @@ const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
 
 // กำหนดรายชื่อแอดมิน
 const ADMIN_IDS = [
-  "U3113GmLkaZvKbncgXkNj9hL8cQJCSCjXscK",
+  "U31cdc39e686d827f23897b5da1431536",
   "Ub77ae405833d4efcca7bd15017109f14"
 ];
 
@@ -625,14 +625,6 @@ async function handleEvent(event) {
   }
 
 
-
-
-  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น") {
-    return client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [getRewardFlexMessage()]
-    });
-  }
 
 
 
