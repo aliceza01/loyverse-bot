@@ -6,7 +6,11 @@ const cron = require('node-cron');
 const { MongoClient } = require('mongodb');
 
 
+
+
 const app = express();
+
+
 
 
 // ==========================================
@@ -16,7 +20,11 @@ const mongoUri = process.env.MONGODB_URI;
 const clientDb = new MongoClient(mongoUri);
 
 
+
+
 let usersCollection;
+
+
 
 
 async function connectDB() {
@@ -32,6 +40,8 @@ async function connectDB() {
 connectDB();
 
 
+
+
 async function getUserData(lineUserId) {
   try {
     if (!usersCollection) return null;
@@ -42,6 +52,8 @@ async function getUserData(lineUserId) {
     return null;
   }
 }
+
+
 
 
 async function saveUserData(lineUserId, phone) {
@@ -58,12 +70,16 @@ async function saveUserData(lineUserId, phone) {
 }
 
 
+
+
 // ==========================================
 // 1. ดึงค่า Environment Variables จาก .env
 // ==========================================
 const LINE_CHANNEL_ACCESS_TOKEN = (process.env.LINE_CHANNEL_ACCESS_TOKEN || '').trim();
 const LINE_CHANNEL_SECRET = (process.env.LINE_CHANNEL_SECRET || '').trim();
 const LOYVERSE_TOKEN = (process.env.LOYVERSE_TOKEN || '').trim();
+
+
 
 
 // กำหนดรายชื่อแอดมิน
@@ -73,11 +89,15 @@ const ADMIN_IDS = [
 ];
 
 
+
+
 const lineConfig = {
   channelAccessToken: LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: LINE_CHANNEL_SECRET
 };
 const client = new line.messagingApi.MessagingApiClient(lineConfig);
+
+
 
 
 async function setDefaultRichMenuGlobal(richMenuId) {
@@ -92,12 +112,16 @@ async function setDefaultRichMenuGlobal(richMenuId) {
 }
 
 
+
+
 // ==========================================
 // 2. Webhook & Endpoint สำหรับ LINE
 // ==========================================
 app.get('/', (req, res) => {
   res.send('Loyverse Bot & Daily Report Service is running with MongoDB & Multi-Admin Rich Menu!');
 });
+
+
 
 
 app.post('/webhook', line.middleware(lineConfig), (req, res) => {
@@ -111,6 +135,8 @@ app.post('/webhook', line.middleware(lineConfig), (req, res) => {
 });
 
 
+
+
 // ==========================================
 // 3. ฟังก์ชันดึงข้อมูลยอดขายและกำไร
 // ==========================================
@@ -121,14 +147,20 @@ async function getDailySales() {
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
 
+
+
     const response = await axios.get('https://api.loyverse.com/v1.0/receipts', {
       headers: { 'Authorization': `Bearer ${LOYVERSE_TOKEN}` },
       params: { created_at_min: startOfDay, created_at_max: endOfDay, limit: 250 }
     });
 
 
+
+
     const receipts = response.data.receipts || [];
     let totalSales = 0, totalCost = 0;
+
+
 
 
     receipts.forEach(receipt => {
@@ -139,6 +171,8 @@ async function getDailySales() {
         });
       }
     });
+
+
 
 
     return {
@@ -153,6 +187,8 @@ async function getDailySales() {
 }
 
 
+
+
 // ==========================================
 // 4. ฟังก์ชันการทำงานของ LINE Bot
 // ==========================================
@@ -160,11 +196,15 @@ async function findCustomerByPhone(phoneNumber) {
   let cursor = null;
 
 
+
+
   do {
     let url = `https://api.loyverse.com/v1.0/customers?limit=250`;
     if (cursor) {
       url += `&cursor=${cursor}`;
     }
+
+
 
 
     try {
@@ -176,6 +216,8 @@ async function findCustomerByPhone(phoneNumber) {
       });
 
 
+
+
       const customers = response.data.customers || [];
       const matchedCustomer = customers.find(c => {
         const phoneInSystem = c.phone_number ? c.phone_number.replace(/\s+/g, '') : '';
@@ -183,9 +225,13 @@ async function findCustomerByPhone(phoneNumber) {
       });
 
 
+
+
       if (matchedCustomer) {
         return matchedCustomer;
       }
+
+
 
 
       cursor = response.data.cursor;
@@ -195,11 +241,17 @@ async function findCustomerByPhone(phoneNumber) {
     }
 
 
+
+
   } while (cursor);
+
+
 
 
   return null;
 }
+
+
 
 
 function getUserIdFlexMessage(userId) {
@@ -221,6 +273,8 @@ function getUserIdFlexMessage(userId) {
 }
 
 
+
+
 function getAdminNoticeFlexMessage(title, description) {
   return {
     type: "flex",
@@ -238,6 +292,8 @@ function getAdminNoticeFlexMessage(title, description) {
     }
   };
 }
+
+
 
 
 function getSalesFlexMessage(salesData, todayStr) {
@@ -295,10 +351,12 @@ function getSalesFlexMessage(salesData, todayStr) {
 }
 
 
+
+
 function getRewardFlexMessage() {
   return {
     type: "flex",
-    altText: "🐾 เมนูสินค้าและโปรโมชั่น แคสเปอร์ เพ็ทช็อป",
+    altText: "🎁 รายการของรางวัลพิเศษจากแคสเปอร์เพ็ทช็อป",
     contents: {
       type: "carousel",
       contents: [
@@ -306,7 +364,7 @@ function getRewardFlexMessage() {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600&auto=format&fit=crop&q=60",
+            url: "https://i.postimg.cc/j5d5r299/procat1.png",
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
@@ -315,9 +373,11 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "🐶 อาหารสุนัข", weight: "bold", size: "xl", color: "#ff7f50" },
-              { type: "text", text: "• อาหารเม็ด (เกรดพรีเมียม)\n• อาหารเปียก (ซอง/กระป๋อง)\n• ขนมหมา (สุนัขขบเคี้ยวฝึกวินัย)", size: "sm", color: "#666666", margin: "md", wrap: true }
-            ]
+              { type: "text", text: "ของรางวัลสุดพิเศษ 1", weight: "bold", size: "lg", color: "#333333" },
+              { type: "text", text: "ใช้ 100 แต้มสะสมแลกรับทันที", size: "sm", color: "#666666", margin: "sm" }
+            ],
+            spacing: "sm",
+            paddingAll: "lg"
           },
           footer: {
             type: "box",
@@ -327,20 +387,21 @@ function getRewardFlexMessage() {
                 type: "button",
                 action: {
                   type: "uri",
-                  label: "ดูสินค้าอาหารหมา",
-                  uri: "https://liff.line.me/2006880893-YOUR_DOG_ID"
+                  label: "🎁 กดแลกรางวัล (100 แต้ม)",
+                  uri: "https://liff.line.me/2010783485-TIIRDjGm"
                 },
                 style: "primary",
                 color: "#ff7f50"
               }
-            ]
+            ],
+            paddingAll: "lg"
           }
         },
         {
           type: "bubble",
           hero: {
             type: "image",
-            url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&auto=format&fit=crop&q=60",
+            url: "https://i.postimg.cc/d1qFTf9P/procat2.png",
             size: "full",
             aspectRatio: "20:13",
             aspectMode: "cover"
@@ -349,9 +410,11 @@ function getRewardFlexMessage() {
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "🐱 อาหารแมว", weight: "bold", size: "xl", color: "#1DB446" },
-              { type: "text", text: "• อาหารเม็ด (บำรุงขนและสุขภาพ)\n• อาหารแมวเปียก (ซอง/กระป๋อง)\n• อาหารแมวเลีย (ของโปรดน้องแมว)", size: "sm", color: "#666666", margin: "md", wrap: true }
-            ]
+              { type: "text", text: "ของรางวัลสุดพิเศษ 2", weight: "bold", size: "lg", color: "#333333" },
+              { type: "text", text: "ใช้ 250 แต้มสะสมแลกรับทันที", size: "sm", color: "#666666", margin: "sm" }
+            ],
+            spacing: "sm",
+            paddingAll: "lg"
           },
           footer: {
             type: "box",
@@ -361,47 +424,14 @@ function getRewardFlexMessage() {
                 type: "button",
                 action: {
                   type: "uri",
-                  label: "ดูอาหารแมว",
+                  label: "🎁 กดแลกรางวัล (250 แต้ม)",
                   uri: "https://liff.line.me/2010783485-TIIRDjGm"
                 },
                 style: "primary",
-                color: "#1DB446"
+                color: "#ff7f50"
               }
-            ]
-          }
-        },
-        {
-          type: "bubble",
-          hero: {
-            type: "image",
-            url: "https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?w=600&auto=format&fit=crop&q=60",
-            size: "full",
-            aspectRatio: "20:13",
-            aspectMode: "cover"
-          },
-          body: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              { type: "text", text: "🐠 อุปกรณ์ & ปลาบอลลูน", weight: "bold", size: "xl", color: "#0066cc" },
-              { type: "text", text: "• อุปกรณ์สัตว์เลี้ยงทั่วไป\n• บริการอาบน้ำ-ตัดขน\n• ปลาบอลลูนและอุปกรณ์ตู้ปลา", size: "sm", color: "#666666", margin: "md", wrap: true }
-            ]
-          },
-          footer: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              {
-                type: "button",
-                action: {
-                  type: "uri",
-                  label: "ดูอุปกรณ์และปลา",
-                  uri: "https://liff.line.me/2006880893-YOUR_FISH_ID"
-                },
-                style: "primary",
-                color: "#0066cc"
-              }
-            ]
+            ],
+            paddingAll: "lg"
           }
         }
       ]
@@ -410,8 +440,12 @@ function getRewardFlexMessage() {
 }
 
 
+
+
 function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
   const contentsList = [];
+
+
 
 
   if (isNewSaved) {
@@ -430,6 +464,8 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
   }
 
 
+
+
   contentsList.push({
     type: "box",
     layout: "vertical",
@@ -441,7 +477,11 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
   });
 
 
+
+
   contentsList.push({ type: "separator", margin: "lg" });
+
+
 
 
   contentsList.push({
@@ -456,6 +496,8 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
     paddingAll: "md",
     cornerRadius: "lg"
   });
+
+
 
 
   return {
@@ -486,7 +528,7 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
             type: "button",
             action: {
               type: "uri",
-              label: "🎁 ดูโปรโมชั่นอาหารแมว",
+              label: "🎁 ดูของรางวัล",
               uri: "https://liff.line.me/2010783485-TIIRDjGm"
             },
             style: "primary",
@@ -497,6 +539,8 @@ function getPointFlexMessage(customerName, points, phone, isNewSaved = false) {
     }
   };
 }
+
+
 
 
 function getWelcomeHelpFlexMessage() {
@@ -531,15 +575,21 @@ function getWelcomeHelpFlexMessage() {
 }
 
 
+
+
 async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
   }
 
 
+
+
   const userMessage = event.message.text.trim();
   const lowerMsg = userMessage.toLowerCase();
   const senderId = event.source.userId;
+
+
 
 
   if (lowerMsg === "ไอดีฉัน" || lowerMsg === "id") {
@@ -550,10 +600,14 @@ async function handleEvent(event) {
   }
 
 
+
+
   if (userMessage.startsWith("#เปลี่ยนริชเมนู")) {
     if (!ADMIN_IDS.includes(senderId)) {
       return Promise.resolve(null);
     }
+
+
 
 
     const newRichMenuId = userMessage.replace("#เปลี่ยนริชเมนู", "").trim();
@@ -563,6 +617,8 @@ async function handleEvent(event) {
         messages: [getAdminNoticeFlexMessage("❌ รูปแบบไม่ถูกต้อง", "กรุณาใส่ Rich Menu ID ต่อท้ายด้วย เช่น #เปลี่ยนริชเมนู 9408661")]
       });
     }
+
+
 
 
     const success = await setDefaultRichMenuGlobal(newRichMenuId);
@@ -578,6 +634,8 @@ async function handleEvent(event) {
   }
 
 
+
+
   if (userMessage === "ยอดขาย" || userMessage === "#ยอดขาย" || userMessage === "กำไร") {
     if (!ADMIN_IDS.includes(senderId)) {
       return client.replyMessage({
@@ -585,6 +643,8 @@ async function handleEvent(event) {
         messages: [getAdminNoticeFlexMessage("⛔ ไม่มีสิทธิ์เข้าถึง", "คำสั่งนี้สำหรับผู้ดูแลระบบเท่านั้นครับ")]
       });
     }
+
+
 
 
     const salesData = await getDailySales();
@@ -598,6 +658,8 @@ async function handleEvent(event) {
     }
 
 
+
+
     return client.replyMessage({
       replyToken: event.replyToken,
       messages: [getSalesFlexMessage(salesData, todayStr)]
@@ -605,7 +667,9 @@ async function handleEvent(event) {
   }
 
 
-  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น" || userMessage === "อาหารหมา" || userMessage === "อาหารแมว" || userMessage === "ปลาบอลลูน") {
+
+
+  if (userMessage === "ของรางวัล" || userMessage === "#ของรางวัล" || userMessage === "โปรโมชั่น") {
     return client.replyMessage({
       replyToken: event.replyToken,
       messages: [getRewardFlexMessage()]
@@ -613,7 +677,11 @@ async function handleEvent(event) {
   }
 
 
+
+
   const matchWithPhone = userMessage.match(/^เช็คแต้ม\s*(\d{9,10})$/);
+
+
 
 
   if (matchWithPhone) {
@@ -621,8 +689,12 @@ async function handleEvent(event) {
     await saveUserData(senderId, phoneNumber);
 
 
+
+
     try {
       const matchedCustomer = await findCustomerByPhone(phoneNumber);
+
+
 
 
       if (matchedCustomer) {
@@ -648,12 +720,18 @@ async function handleEvent(event) {
   }
 
 
+
+
   const isOnlyCheckPoints = userMessage === '#เช็คแต้ม' || userMessage === 'เช็คแต้ม' || userMessage === 'แต้ม';
   const isOnlyPhoneNumber = /^\d{9,10}$/.test(userMessage);
 
 
+
+
   if (isOnlyCheckPoints || isOnlyPhoneNumber) {
     const savedPhone = await getUserData(senderId);
+
+
 
 
     if (!savedPhone) {
@@ -664,8 +742,12 @@ async function handleEvent(event) {
     }
 
 
+
+
     try {
       const matchedCustomer = await findCustomerByPhone(savedPhone);
+
+
 
 
       if (matchedCustomer) {
@@ -691,8 +773,12 @@ async function handleEvent(event) {
   }
 
 
+
+
   return Promise.resolve(null);
 }
+
+
 
 
 // ==========================================
@@ -704,11 +790,17 @@ cron.schedule('0 22 * * *', async () => {
   if (ADMIN_IDS.length === 0) return;
 
 
+
+
   const salesData = await getDailySales();
   if (!salesData) return;
 
 
+
+
   const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+
 
 
   try {
@@ -721,6 +813,8 @@ cron.schedule('0 22 * * *', async () => {
     console.error('❌ ส่งรายงานไม่สำเร็จ:', err.message);
   }
 }, { timezone: "Asia/Bangkok" });
+
+
 
 
 // ==========================================
